@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile storing preferences, maker background and Google account identity metadata",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 200 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "experience": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"] },
+        "interests": { "type": "array" },
+        "skills": { "type": "array" },
+        "preferredDifficulty": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"] },
+        "availableTime": { "type": "string", "maxLength": 100 },
+        "collaborationPreference": { "type": "string", "enum": ["Open to team builds", "Mentoring only", "Project-specific", "Solo maker"] },
+        "bio": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["displayName", "experience"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Private hardware electronic component in a maker's cloud-backed workbench inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 100 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "catalogId": { "type": "string", "maxLength": 100 },
+        "name": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "enum": ["microcontroller", "sensor", "actuator", "passive", "prototyping", "display", "power", "other"] },
+        "totalQuantity": { "type": "number" },
+        "reservedQuantity": { "type": "number" },
+        "installedQuantity": { "type": "number" },
+        "condition": { "type": "string", "enum": ["working", "partially-working", "untested", "faulty", "unsafe"] },
+        "source": { "type": "string", "enum": ["purchased", "previous-project", "salvaged", "donated"] },
+        "unitMassGrams": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "photoPreview": { "type": "string", "maxLength": 2000 },
+        "verificationStatus": { "type": "string", "enum": ["untested", "user-reported-working", "recorded-test"] },
+        "createdAt": { "type": "string" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "catalogId", "name", "category", "totalQuantity", "condition", "source"]
+    },
+    "SavedProject": {
+      "title": "SavedProject",
+      "description": "Project bookmarked by the user in their private account",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string", "maxLength": 100 },
+        "savedAt": { "type": "string" }
+      },
+      "required": ["projectId"]
+    },
+    "GuideProgress": {
+      "title": "GuideProgress",
+      "description": "Conceptual learning step progress for interactive 3D build guides",
+      "type": "object",
+      "properties": {
+        "progressId": { "type": "string", "maxLength": 150 },
+        "projectId": { "type": "string", "maxLength": 100 },
+        "recipeVersion": { "type": "string", "maxLength": 20 },
+        "currentStepIndex": { "type": "number" },
+        "completedStepIndices": { "type": "array" },
+        "playbackSpeed": { "type": "number" },
+        "isLearningCompleted": { "type": "boolean" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["progressId", "projectId", "recipeVersion"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "Private profile document for authenticated maker"
+    },
+    "/users/{uid}/inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "Private component inventory item owned by maker"
+    },
+    "/users/{uid}/savedProjects/{projectId}": {
+      "schema": "SavedProject",
+      "description": "Private saved project bookmark"
+    },
+    "/users/{uid}/guideProgress/{progressId}": {
+      "schema": "GuideProgress",
+      "description": "Private standalone 3D build guide progress"
+    }
+  }
+}

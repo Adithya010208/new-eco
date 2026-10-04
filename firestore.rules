@@ -1,0 +1,206 @@
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+
+      // ==========================================
+      // HELPER FUNCTIONS & VALIDATION BLUEPRINTS
+      // ==========================================
+
+      function isAuthenticated() {
+        return request.auth != null && request.auth.uid != null;
+      }
+
+      function isOwner(userId) {
+        return isAuthenticated() && request.auth.uid == userId;
+      }
+
+      function isValidId(id) {
+        return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      }
+
+      function incoming() {
+        return request.resource.data;
+      }
+
+      function existing() {
+        return resource.data;
+      }
+
+      // --- User Profile Validation ---
+      // Explicit field allowlist (hasOnly) and required fields (hasAll)
+      function isValidUserProfile(data) {
+        return data.keys().hasOnly([
+            'displayName', 'experience', 'interests', 'skills',
+            'preferredDifficulty', 'availableTime', 'collaborationPreference',
+            'email', 'photoURL', 'bio', 'createdAt', 'updatedAt'
+          ])
+          && data.keys().hasAll(['displayName', 'experience'])
+          && data.displayName is string
+          && data.displayName.size() >= 1
+          && data.displayName.size() <= 100
+          && data.experience in ['Beginner', 'Intermediate', 'Advanced']
+          && (!('email' in data) || (data.email is string && data.email.size() <= 200))
+          && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+          && (!('interests' in data) || (data.interests is list && data.interests.size() <= 30))
+          && (!('skills' in data) || (data.skills is list && data.skills.size() <= 30))
+          && (!('preferredDifficulty' in data) || data.preferredDifficulty in ['Beginner', 'Intermediate', 'Advanced'])
+          && (!('availableTime' in data) || (data.availableTime is string && data.availableTime.size() <= 100))
+          && (!('collaborationPreference' in data) || data.collaborationPreference in ['Open to team builds', 'Mentoring only', 'Project-specific', 'Solo maker'])
+          && (!('bio' in data) || (data.bio is string && data.bio.size() <= 500))
+          && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50))
+          && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+      }
+
+      // --- Inventory Item Validation ---
+      // Explicit field allowlist (hasOnly) and required fields (hasAll)
+      // Strictly requires integer quantities: totalQuantity is int, reservedQuantity is int, installedQuantity is int
+      // Supports 'unsafe' condition per domain model (hazardous / quarantine)
+      function isValidInventoryItem(data, uid) {
+        return data.keys().hasOnly([
+            'id', 'ownerId', 'catalogId', 'name', 'category',
+            'totalQuantity', 'reservedQuantity', 'installedQuantity',
+            'condition', 'source', 'unitMassGrams', 'notes',
+            'photoPreview', 'verificationStatus', 'lastUpdated',
+            'isSharedForCollaboration'
+          ])
+          && data.keys().hasAll([
+            'id', 'ownerId', 'catalogId', 'name', 'category',
+            'totalQuantity', 'condition', 'source'
+          ])
+          && data.ownerId == uid
+          && data.ownerId == request.auth.uid
+          && data.id is string
+          && data.id.size() >= 1
+          && data.id.size() <= 100
+          && isValidId(data.id)
+          && data.catalogId is string
+          && data.catalogId.size() >= 1
+          && data.catalogId.size() <= 100
+          && data.name is string
+          && data.name.size() >= 1
+          && data.name.size() <= 150
+          && data.category in ['microcontroller', 'sensor', 'actuator', 'passive', 'prototyping', 'display', 'power', 'other']
+          && data.totalQuantity is int
+          && data.totalQuantity >= 0
+          && data.totalQuantity <= 10000
+          // In Phase 4A, client cannot create real collaboration reservations (reservedQuantity must be 0)
+          && (!('reservedQuantity' in data) || (data.reservedQuantity is int && data.reservedQuantity == 0))
+          && (!('installedQuantity' in data) || (data.installedQuantity is int && data.installedQuantity >= 0 && data.installedQuantity <= data.totalQuantity))
+          && data.condition in ['working', 'partially-working', 'untested', 'faulty', 'unsafe']
+          && data.source in ['purchased', 'previous-project', 'salvaged', 'donated', 'gifted', 'recycled']
+          && (!('unitMassGrams' in data) || data.unitMassGrams == null || (data.unitMassGrams is number && data.unitMassGrams >= 0 && data.unitMassGrams <= 50000))
+          && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
+          && (!('photoPreview' in data) || data.photoPreview == null || (data.photoPreview is string && data.photoPreview.size() <= 2000))
+          && (!('verificationStatus' in data) || data.verificationStatus in ['untested', 'user-reported-working', 'recorded-test'])
+          && (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50))
+          && (!('isSharedForCollaboration' in data) || data.isSharedForCollaboration is bool);
+      }
+
+      // --- Saved Project Validation ---
+      // Explicit field allowlist (hasOnly) and required fields (hasAll)
+      function isValidSavedProject(data) {
+        return data.keys().hasOnly(['projectId', 'savedAt'])
+          && data.keys().hasAll(['projectId'])
+          && data.projectId is string
+          && data.projectId.size() >= 1
+          && data.projectId.size() <= 100
+          && isValidId(data.projectId)
+          && (!('savedAt' in data) || (data.savedAt is string && data.savedAt.size() <= 50));
+      }
+
+      // --- Guide Progress Validation ---
+      // Explicit field allowlist (hasOnly) and required fields (hasAll)
+      // Strictly requires integer currentStepIndex (is int)
+      // Restricted to the currently supported recipe pair: projectId == 'proj-smart-dustbin', recipeVersion == 'v1'
+      function isValidGuideProgress(data, progressId) {
+        return data.keys().hasOnly([
+            'progressId', 'projectId', 'recipeVersion',
+            'currentStepIndex', 'completedStepIndices',
+            'playbackSpeed', 'isLearningCompleted', 'lastUpdated'
+          ])
+          && data.keys().hasAll(['projectId', 'recipeVersion'])
+          && (!('progressId' in data) || (data.progressId is string && data.progressId == progressId))
+          && data.projectId == 'proj-smart-dustbin'
+          && data.recipeVersion == 'v1'
+          // Permitted step index for supported recipe (0 to 5) must be integer
+          && (!('currentStepIndex' in data) || (data.currentStepIndex is int && data.currentStepIndex >= 0 && data.currentStepIndex <= 5))
+          // Completed step values must only be valid indices from supported recipe [0, 1, 2, 3, 4, 5]
+          && (!('completedStepIndices' in data) || (
+              data.completedStepIndices is list
+              && data.completedStepIndices.size() <= 6
+              && [0, 1, 2, 3, 4, 5].hasAll(data.completedStepIndices)
+            ))
+          && (!('playbackSpeed' in data) || (data.playbackSpeed is number && data.playbackSpeed >= 0.5 && data.playbackSpeed <= 5.0))
+          && (!('isLearningCompleted' in data) || data.isLearningCompleted is bool)
+          && (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50));
+      }
+
+      // ==========================================
+      // COLLECTION ACCESS RULES
+      // ==========================================
+
+      // Users Collection Root & Profile
+      match /users/{uid} {
+        allow get: if isOwner(uid);
+        allow list: if false; // Users cannot list other users in private Account Mode
+        allow create: if isOwner(uid) && isValidUserProfile(incoming());
+        allow update: if isOwner(uid) && isValidUserProfile(incoming());
+        allow delete: if isOwner(uid);
+
+        // Private Inventory Subcollection
+        match /inventory/{itemId} {
+          allow get: if isOwner(uid);
+          allow list: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && itemId == incoming().id
+            && isValidId(itemId)
+            && isValidInventoryItem(incoming(), uid);
+          allow update: if isOwner(uid)
+            && itemId == incoming().id
+            && isValidId(itemId)
+            && isValidInventoryItem(incoming(), uid)
+            && incoming().ownerId == existing().ownerId
+            && incoming().id == existing().id;
+          allow delete: if isOwner(uid) && isValidId(itemId);
+        }
+
+        // Private Saved Projects Subcollection
+        match /savedProjects/{projectId} {
+          allow get: if isOwner(uid);
+          allow list: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && projectId == incoming().projectId
+            && isValidId(projectId)
+            && isValidSavedProject(incoming());
+          allow update: if isOwner(uid)
+            && projectId == incoming().projectId
+            && isValidId(projectId)
+            && isValidSavedProject(incoming())
+            && incoming().projectId == existing().projectId;
+          allow delete: if isOwner(uid) && isValidId(projectId);
+        }
+
+        // Private Standalone 3D Guide Progress Subcollection
+        // Document ID must strictly correspond to {projectId}_{recipeVersion}
+        // which evaluates to 'proj-smart-dustbin_v1'
+        match /guideProgress/{progressId} {
+          allow get: if isOwner(uid);
+          allow list: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && progressId == incoming().projectId + '_' + incoming().recipeVersion
+            && isValidGuideProgress(incoming(), progressId);
+          allow update: if isOwner(uid)
+            && progressId == incoming().projectId + '_' + incoming().recipeVersion
+            && incoming().projectId == existing().projectId
+            && incoming().recipeVersion == existing().recipeVersion
+            && isValidGuideProgress(incoming(), progressId);
+          allow delete: if isOwner(uid);
+        }
+      }
+
+      // Default Deny for all other collections
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+  }
