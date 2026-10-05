@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --app-header-height: 64px;
     --bg-main: #F7F9F8;
     --primary-teal: #087F83;
     --primary-teal-dark: #066366;
@@ -47,17 +48,31 @@
 .studio-scene { height: clamp(320px, 48dvh, 480px); }
 .studio-panel-content { max-height: 460px; scrollbar-gutter: stable; }
 @media (min-width: 1024px) {
-  .studio-scene, .studio-sidebar { height: clamp(410px, calc(100dvh - 240px), 760px); }
-  .studio-workspace { position: sticky; top: 88px; }
+  .studio-scene, .studio-sidebar { height: clamp(410px, calc(100dvh - var(--app-header-height) - 160px), 760px); }
+  .studio-workspace { position: sticky; top: calc(var(--app-header-height) + 8px); }
   .studio-panel-content { flex: 1; max-height: none; }
-  .studio-scene-expanded { position: fixed; inset: 84px 410px 16px 16px; height: auto; z-index: 25; }
+  .studio-scene-expanded { position: fixed; inset: calc(var(--app-header-height) + 4px) 410px 16px 16px; height: auto; z-index: 25; }
 }
 @media (max-width: 1023px) {
-  .studio-scene { position: sticky; top: 76px; z-index: 20; }
+  .studio-scene { position: sticky; top: calc(var(--app-header-height) + 8px); z-index: 20; }
   .studio-panel-content { max-height: 42dvh; }
   .studio-scene-expanded { height: 58dvh; }
 }
 @media (max-width: 639px) {
   .studio-scene { height: 34dvh; min-height: 240px; position: relative; top: auto; }
   .studio-panel-content { max-height: 42dvh; }
+}
+
+/* Separate navigation from utility controls so neither wraps unpredictably. */
+.header-utilities > button,
+.header-utilities > div > button,
+.header-utilities select { height: 36px; }
+.header-utilities > * { flex-shrink: 0; }
+.header-utilities > div:first-child { flex-shrink: 1; }
+@media (max-width: 639px) {
+  .header-utilities select { width: 104px; }
+  :root { --app-header-height: 112px; }
+}
+@media (min-width: 1536px) {
+  :root { --app-header-height: 112px; }
 }

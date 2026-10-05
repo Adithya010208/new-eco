@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { Plus, RotateCcw, Menu, X, Users } from 'lucide-react';
+import { Plus, RotateCcw, Menu, X } from 'lucide-react';
 import { DemoUserSwitcher } from '../common/DemoUserSwitcher';
 import { AuthBadge } from '../common/AuthBadge';
 import { LanguageSelector } from '../common/LanguageSelector';
@@ -39,6 +39,19 @@ export function Header({
 }: HeaderProps) {
   const [location] = useLocation();
   const { t } = useTranslation();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [mobileMenuOpen, setMobileMenuOpen]);
 
   const navLinks = [
     { href: '/', label: t('nav.discover', 'Discover') },
@@ -54,13 +67,16 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-[1fr_auto] items-center gap-x-4">
         {/* Zone 1: Brand Wordmark */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 min-h-16 min-w-0">
           <button
+            ref={menuButtonRef}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-            aria-label="Toggle mobile menu"
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -73,39 +89,17 @@ export function Header({
           </Link>
         </div>
 
-        {/* Zone 2: Clean nav links */}
-        <nav className="hidden 2xl:flex flex-wrap items-center gap-3 text-sm font-medium text-slate-600">
-          {navLinks.map((link) => {
-            const isActive =
-              link.href === '/'
-                ? location === '/'
-                : location.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`transition-colors whitespace-nowrap py-1 relative ${
-                  isActive
-                    ? 'text-[#087F83] font-semibold'
-                    : 'text-slate-600 hover:text-[#132B3B]'
-                }`}
-              >
-                {link.label}
-                {link.count !== undefined && link.count > 0 && (
-                  <span className="ml-1.5 px-1.5 py-0.2 text-[10px] font-mono bg-slate-100 text-slate-700 rounded">
-                    {link.count}
-                  </span>
-                )}
-                {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#087F83] rounded-full" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+        <button
+          onClick={onOpenAddComponent}
+          aria-label="Add Component"
+          className="sm:hidden inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-lg cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Component</span>
+        </button>
 
         {/* Zone 3: Primary Actions + Mode & Auth Controls */}
-        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+        <div className="header-utilities col-span-2 sm:col-span-1 flex items-center justify-between sm:justify-end gap-2 min-w-0 pb-3 sm:pb-0">
           {/* Labelled Demo User Switcher (Only visible in Demo Mode) */}
           {mode === 'demo' && (
             <DemoUserSwitcher
@@ -137,7 +131,8 @@ export function Header({
 
           <button
             onClick={onOpenAddComponent}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-lg shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+            aria-label="Add Component"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-lg shadow-xs transition-colors cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Add Component</span>
@@ -145,9 +140,46 @@ export function Header({
         </div>
       </div>
 
+      <div className="hidden 2xl:block border-t border-slate-100">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Zone 2: Clean nav links */}
+        <nav aria-label="Primary navigation" className="hidden 2xl:flex items-center justify-between gap-2 min-h-12 text-sm font-medium text-slate-600">
+          {navLinks.map((link) => {
+            const isActive =
+              link.href === '/'
+                ? location === '/'
+                : location.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={`transition-colors whitespace-nowrap px-2 py-3 relative ${
+                  isActive
+                    ? 'text-[#087F83] font-semibold'
+                    : 'text-slate-600 hover:text-[#132B3B]'
+                }`}
+              >
+                {link.label}
+                {link.count !== undefined && link.count > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.2 text-[10px] font-mono bg-slate-100 text-slate-700 rounded">
+                    {link.count}
+                  </span>
+                )}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#087F83] rounded-full" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        </div>
+      </div>
+
       {/* Mobile drawer navigation */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-1 shadow-lg">
+        <nav id="mobile-navigation" aria-label="Mobile navigation" className="lg:hidden absolute inset-x-0 top-full max-h-[calc(100dvh-7rem)] overflow-y-auto border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-1 shadow-lg">
           {navLinks.map((link) => {
             const isActive =
               link.href === '/'
@@ -158,6 +190,7 @@ export function Header({
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive ? 'page' : undefined}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-[#EAF4F3] text-[#087F83] font-semibold'
@@ -176,8 +209,7 @@ export function Header({
             );
           })}
 
-          <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between">
-            <LanguageSelector onLanguageChange={onLanguageChange} />
+          {mode === 'demo' && <div className="pt-3 mt-2 border-t border-slate-100 flex items-center">
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
@@ -188,8 +220,8 @@ export function Header({
               <RotateCcw className="w-3.5 h-3.5" />
               Reset Demo Baseline
             </button>
-          </div>
-        </div>
+          </div>}
+        </nav>
       )}
     </header>
   );

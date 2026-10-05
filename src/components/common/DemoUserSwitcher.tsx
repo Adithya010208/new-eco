@@ -53,22 +53,22 @@ export function DemoUserSwitcher({
   const activePendingCount = getMakerPendingCount(activeUser.id);
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className="relative inline-block text-left min-w-0" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-[#EAF4F3] hover:bg-[#d8ecea] text-[#132B3B] border border-[#087F83]/30 rounded-lg transition-colors cursor-pointer shadow-2xs"
+        className="inline-flex h-9 max-w-full items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs font-semibold bg-[#EAF4F3] hover:bg-[#d8ecea] text-[#132B3B] border border-[#087F83]/30 rounded-lg transition-colors cursor-pointer shadow-2xs"
         aria-label="Switch active demo identity"
         aria-expanded={isOpen}
       >
         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
         <span className="text-slate-500 font-normal hidden sm:inline">Role:</span>
-        <span className="font-bold text-[#087F83]">{activeUser.displayName}</span>
-        <span className="text-[10px] text-slate-500 bg-white/80 px-1.5 py-0.5 rounded border border-slate-200">
+        <span className="font-bold text-[#087F83] max-w-20 sm:max-w-32 truncate">{activeUser.displayName}</span>
+        <span className="hidden sm:inline text-[10px] text-slate-500 bg-white/80 px-1.5 py-0.5 rounded border border-slate-200">
           Demo
         </span>
 
         {activePendingCount > 0 && (
-          <span className="inline-flex items-center justify-center px-1.5 py-0.2 text-[10px] font-bold font-mono text-white bg-amber-500 rounded-full">
+          <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.2 text-[10px] font-bold font-mono text-white bg-amber-500 rounded-full">
             {activePendingCount}
           </span>
         )}
@@ -77,7 +77,7 @@ export function DemoUserSwitcher({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden divide-y divide-slate-100">
+        <div className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden divide-y divide-slate-100">
           <div className="p-3 bg-[#F7F9F8]">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
