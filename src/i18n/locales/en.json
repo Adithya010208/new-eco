@@ -189,5 +189,38 @@
     "resourceNote": "External references for learning. Component variants and wiring may differ from this build.",
     "forStep": "Relevant to this step",
     "more": "More project references"
+  },
+  "chat": {
+    "help": "Troubleshoot",
+    "open": "Open troubleshooting chat",
+    "title": "EcoBuild Troubleshooting",
+    "mode": "Built-in guidance · no live AI",
+    "clear": "Clear conversation",
+    "close": "Close troubleshooting chat",
+    "conversation": "Troubleshooting conversation",
+    "welcome": "What is going wrong? Describe your symptom or choose a topic below. I can suggest checks and help you collect useful details for a mentor.",
+    "languageNote": "Technical answers are currently in English. Topic buttons work in every supported language.",
+    "unmatched": "I could not match that symptom to a built-in guide. Choose the closest topic below, or describe the component and what you expected versus what happened. For a custom circuit, ask a mentor in Maker Network.",
+    "you": "You",
+    "assistant": "EcoBuild helper",
+    "openGuide": "Open related page / guide",
+    "references": "Reference guides",
+    "newTab": "Opens in a new tab",
+    "unresolved": "Still not resolved",
+    "suggestions": "Suggested troubleshooting topics",
+    "placeholder": "Describe the issue…",
+    "send": "Send message",
+    "privacy": "Chat stays in memory on this page. No messages are sent to an AI service or saved to your account.",
+    "topics": {
+      "servo": "Dustbin lid / servo",
+      "sensor": "Distance sensor",
+      "light": "Night light / LED",
+      "studio": "3D Studio / camera",
+      "inventory": "Parts / project matching",
+      "account": "Sign-in / saved data",
+      "progress": "Completion / Eco Points",
+      "power": "Power / overheating"
+    },
+    "moreTopics": "Help with another issue"
   }
 }

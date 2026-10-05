@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { Plus, RotateCcw, Menu, X } from 'lucide-react';
 import { DemoUserSwitcher } from '../common/DemoUserSwitcher';
+import { TroubleshootingChat } from '../common/TroubleshootingChat';
 import { AuthBadge } from '../common/AuthBadge';
 import { LanguageSelector } from '../common/LanguageSelector';
 import { MakerProfile, CollaborationProposal, MentorshipRequest } from '../../types';
@@ -87,6 +88,7 @@ export function Header({
           >
             EcoBuild
           </Link>
+          <TroubleshootingChat />
         </div>
 
         <button
@@ -95,7 +97,7 @@ export function Header({
           className="sm:hidden inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-lg cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Component</span>
+          <span className="hidden min-[400px]:inline">Add Component</span>
         </button>
 
         {/* Zone 3: Primary Actions + Mode & Auth Controls */}

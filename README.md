@@ -189,3 +189,7 @@ Here is how to test the end-to-end collaborative flow in the prototype:
    - Switch demo role to **Dr. Robert Vance** in the top bar.
    - Go to **Maker Network** → **My Activity** → **Mentorship Tickets**, type advice, and click **Reply**.
    - Switch back to **Adithya** to see Dr. Vance's guidance and click **Mark Question as Resolved**.
+
+## Troubleshooting chat
+
+Open the speech-bubble button beside the EcoBuild logo. The built-in assistant matches common symptoms, offers numbered checks, provides unresolved-issue follow-ups, and links to project guides and reference documentation. It works in Demo Mode without an API key and does not change platform data. It is rule-based guidance, not a live AI model. English/Tamil/Hindi controls and topic buttons are supported; technical answers and free-text keyword matching currently use English. Conversations stay in page memory and are cleared on reload.
