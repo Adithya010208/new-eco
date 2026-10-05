@@ -23,6 +23,11 @@ import {
   PinEndpoint,
   BehaviorSimulationState,
 } from '../types';
+import {
+  LDRModel,
+  ResistorModel,
+  LEDModel,
+} from '../models/NightLightModels';
 
 interface StudioCanvasProps {
   currentStep: AssemblyStep;
@@ -34,6 +39,8 @@ interface StudioCanvasProps {
   highlightWireId: string | null;
   cameraPosition: [number, number, number];
   cameraTarget: [number, number, number];
+  projectId?: string;
+  ambientLightLuxPercent?: number;
   onSelectComponent: (componentId: string | null) => void;
   onHoverPin: (pin: PinEndpoint | null) => void;
   onSelectPin: (pin: PinEndpoint) => void;
@@ -87,6 +94,8 @@ export function StudioCanvas(props: StudioCanvasProps) {
     highlightWireId,
     cameraPosition,
     cameraTarget,
+    projectId,
+    ambientLightLuxPercent,
     onSelectComponent,
     onHoverPin,
     onSelectPin,
@@ -295,87 +304,156 @@ export function StudioCanvas(props: StudioCanvasProps) {
               targetLookAt={cameraTarget}
             />
 
-            {/* Dustbin Model (with hinged lid synchronized to simulation state) */}
-            <DustbinModel
-              position={[-4.2, 0, 0]}
-              lidOpenProgress={simulationState.lidOpenProgress}
-              isSelected={selectedComponentId === 'comp-dustbin'}
-              onSelectComponent={() => onSelectComponent('comp-dustbin')}
-            />
+            {projectId === 'proj-night-light' ? (
+              <>
+                {/* Arduino Uno Board */}
+                <ArduinoUnoModel
+                  position={[2.5, 0, 0]}
+                  isSelected={selectedComponentId === 'comp-arduino'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-arduino')}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-arduino')}
+                  onSelectComponent={() => onSelectComponent('comp-arduino')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
 
-            {/* Arduino Uno Board */}
-            <ArduinoUnoModel
-              position={[2.5, 0, 0]}
-              isSelected={selectedComponentId === 'comp-arduino'}
-              isStepActive={currentStep.activeComponentIds.includes('comp-arduino')}
-              highlightPinIds={currentStep.highlightPinIds}
-              activePins={pins.filter((p) => p.componentId === 'comp-arduino')}
-              onSelectComponent={() => onSelectComponent('comp-arduino')}
-              onHoverPin={onHoverPin}
-              onSelectPin={onSelectPin}
-            />
+                {/* Half-Size Breadboard */}
+                <BreadboardModel
+                  position={[0.2, 0, 0]}
+                  isSelected={selectedComponentId === 'comp-breadboard'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-breadboard')}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-breadboard')}
+                  onSelectComponent={() => onSelectComponent('comp-breadboard')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
 
-            {/* Half-Size Breadboard */}
-            <BreadboardModel
-              position={[0.2, 0, 0]}
-              isSelected={selectedComponentId === 'comp-breadboard'}
-              isStepActive={currentStep.activeComponentIds.includes('comp-breadboard')}
-              highlightPinIds={currentStep.highlightPinIds}
-              activePins={pins.filter((p) => p.componentId === 'comp-breadboard')}
-              onSelectComponent={() => onSelectComponent('comp-breadboard')}
-              onHoverPin={onHoverPin}
-              onSelectPin={onSelectPin}
-            />
+                {/* GL5528 Photoresistor (LDR) */}
+                <LDRModel
+                  position={[-0.6, 0.25, -0.6]}
+                  isSelected={selectedComponentId === 'comp-ldr'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-ldr')}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-ldr')}
+                  onSelectComponent={() => onSelectComponent('comp-ldr')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
 
-            {/* Dedicated External Regulated 5V Servo Power Supply */}
-            <ExternalPowerSupplyModel
-              position={[-0.6, 0, -2.2]}
-              isSelected={selectedComponentId === 'comp-ext-power'}
-              isStepActive={currentStep.activeComponentIds.includes('comp-ext-power')}
-              highlightPinIds={currentStep.highlightPinIds}
-              activePins={pins.filter((p) => p.componentId === 'comp-ext-power')}
-              onSelectComponent={() => onSelectComponent('comp-ext-power')}
-              onHoverPin={onHoverPin}
-              onSelectPin={onSelectPin}
-            />
+                {/* 10k Divider Resistor */}
+                <ResistorModel
+                  position={[-0.4, 0.2, -0.9]}
+                  colorBands={['#78350F', '#000000', '#EA580C', '#D97706']}
+                  isSelected={selectedComponentId === 'comp-res-10k'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-res-10k')}
+                  onSelectComponent={() => onSelectComponent('comp-res-10k')}
+                />
 
-            {/* SG90 Micro Servo (Mounted directly inside Dustbin rear cradle) */}
-            <SG90ServoModel
-              position={[-4.2, 4.8, -1.95]}
-              rotation={[0, 0, 0]}
-              servoAngleDegrees={simulationState.servoAngleDegrees}
-              isSelected={selectedComponentId === 'comp-servo'}
-              isStepActive={currentStep.activeComponentIds.includes('comp-servo')}
-              highlightPinIds={currentStep.highlightPinIds}
-              activePins={pins.filter((p) => p.componentId === 'comp-servo')}
-              onSelectComponent={() => onSelectComponent('comp-servo')}
-              onHoverPin={onHoverPin}
-              onSelectPin={onSelectPin}
-            />
+                {/* 220 LED Current Limiting Resistor */}
+                <ResistorModel
+                  position={[0.8, 0.2, 0.2]}
+                  colorBands={['#DC2626', '#DC2626', '#78350F', '#D97706']}
+                  isSelected={selectedComponentId === 'comp-res-220'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-res-220')}
+                  onSelectComponent={() => onSelectComponent('comp-res-220')}
+                />
 
-            {/* HC-SR04 Ultrasonic Distance Sensor (Mounted directly inside Dustbin front aperture) */}
-            <HCSR04Model
-              position={[-4.2, 3.2, 1.70]}
-              rotation={[0, 0, 0]}
-              isSelected={selectedComponentId === 'comp-sonar'}
-              isStepActive={currentStep.activeComponentIds.includes('comp-sonar')}
-              isSimulating={isSimulationStep}
-              isTriggered={simulationState.isTriggered}
-              obstacleDistanceCm={simulationState.obstacleDistanceCm}
-              highlightPinIds={currentStep.highlightPinIds}
-              activePins={pins.filter((p) => p.componentId === 'comp-sonar')}
-              onSelectComponent={() => onSelectComponent('comp-sonar')}
-              onHoverPin={onHoverPin}
-              onSelectPin={onSelectPin}
-            />
+                {/* 5mm Diffused Red LED Indicator */}
+                <LEDModel
+                  position={[1.0, 0.3, 0.6]}
+                  isIlluminated={(ambientLightLuxPercent ?? 100) < 40 || simulationState.isTriggered}
+                  isSelected={selectedComponentId === 'comp-led'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-led')}
+                  onSelectComponent={() => onSelectComponent('comp-led')}
+                />
+              </>
+            ) : (
+              <>
+                {/* Dustbin Model (with hinged lid synchronized to simulation state) */}
+                <DustbinModel
+                  position={[-4.2, 0, 0]}
+                  lidOpenProgress={simulationState.lidOpenProgress}
+                  isSelected={selectedComponentId === 'comp-dustbin'}
+                  onSelectComponent={() => onSelectComponent('comp-dustbin')}
+                />
 
-            {/* Virtual Hand / Obstacle (Visible during live simulation step) */}
-            {isSimulationStep && (
-              <VirtualHandModel
-                distanceCm={simulationState.obstacleDistanceCm}
-                isTriggered={simulationState.isTriggered}
-                onDistanceChange={onDistanceChange}
-              />
+                {/* Arduino Uno Board */}
+                <ArduinoUnoModel
+                  position={[2.5, 0, 0]}
+                  isSelected={selectedComponentId === 'comp-arduino'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-arduino')}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-arduino')}
+                  onSelectComponent={() => onSelectComponent('comp-arduino')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
+
+                {/* Half-Size Breadboard */}
+                <BreadboardModel
+                  position={[0.2, 0, 0]}
+                  isSelected={selectedComponentId === 'comp-breadboard'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-breadboard')}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-breadboard')}
+                  onSelectComponent={() => onSelectComponent('comp-breadboard')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
+
+                {/* Dedicated External Regulated 5V Servo Power Supply */}
+                <ExternalPowerSupplyModel
+                  position={[-0.6, 0, -2.2]}
+                  isSelected={selectedComponentId === 'comp-ext-power'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-ext-power')}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-ext-power')}
+                  onSelectComponent={() => onSelectComponent('comp-ext-power')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
+
+                {/* SG90 Micro Servo (Mounted directly inside Dustbin rear cradle) */}
+                <SG90ServoModel
+                  position={[-4.2, 4.8, -1.95]}
+                  rotation={[0, 0, 0]}
+                  servoAngleDegrees={simulationState.servoAngleDegrees}
+                  isSelected={selectedComponentId === 'comp-servo'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-servo')}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-servo')}
+                  onSelectComponent={() => onSelectComponent('comp-servo')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
+
+                {/* HC-SR04 Ultrasonic Distance Sensor (Mounted directly inside Dustbin front aperture) */}
+                <HCSR04Model
+                  position={[-4.2, 3.2, 1.70]}
+                  rotation={[0, 0, 0]}
+                  isSelected={selectedComponentId === 'comp-sonar'}
+                  isStepActive={currentStep.activeComponentIds.includes('comp-sonar')}
+                  isSimulating={isSimulationStep}
+                  isTriggered={simulationState.isTriggered}
+                  obstacleDistanceCm={simulationState.obstacleDistanceCm}
+                  highlightPinIds={currentStep.highlightPinIds}
+                  activePins={pins.filter((p) => p.componentId === 'comp-sonar')}
+                  onSelectComponent={() => onSelectComponent('comp-sonar')}
+                  onHoverPin={onHoverPin}
+                  onSelectPin={onSelectPin}
+                />
+
+                {/* Virtual Hand / Obstacle (Visible during live simulation step) */}
+                {isSimulationStep && (
+                  <VirtualHandModel
+                    distanceCm={simulationState.obstacleDistanceCm}
+                    isTriggered={simulationState.isTriggered}
+                    onDistanceChange={onDistanceChange}
+                  />
+                )}
+              </>
             )}
 
             {/* 3D Catmull-Rom Curved Jumper Wires */}

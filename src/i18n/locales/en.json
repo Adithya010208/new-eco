@@ -1,0 +1,143 @@
+{
+  "nav": {
+    "discover": "Discover",
+    "components": "My Components",
+    "projects": "Project Library",
+    "network": "Maker Network",
+    "studio": "3D Build Studio",
+    "saved": "Saved Projects",
+    "leaderboards": "Leaderboards",
+    "impact": "Impact & Ledger",
+    "profile": "Profile & Settings",
+    "addComponent": "Add Component",
+    "resetDemo": "Reset Demo"
+  },
+  "common": {
+    "appName": "EcoBuild",
+    "tagline": "Circular Electronics & Component Reuse Platform",
+    "ecoPoints": "Eco Points",
+    "builderRank": "Builder Rank",
+    "ecoRank": "Eco Rank",
+    "demoMode": "Demo Mode",
+    "accountMode": "Cloud Account",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "loading": "Loading...",
+    "search": "Search",
+    "filter": "Filter",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "difficulty": "Difficulty",
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "hardwareMass": "Diverted Hardware Mass",
+    "reuseCycles": "Reuse Cycles",
+    "projectsCompleted": "Projects Completed",
+    "language": "Language",
+    "viewDetails": "View Details",
+    "startBuild": "Start 3D Build",
+    "completeBuild": "Record Completion"
+  },
+  "leaderboards": {
+    "title": "Circular Maker Leaderboards",
+    "subtitle": "Recognizing verified physical circularity and engineering craftsmanship across our maker community.",
+    "tabEco": "Circular Eco Points",
+    "tabBuilder": "Builder Progress & Rank",
+    "rank": "Rank",
+    "maker": "Maker",
+    "points": "Eco Points",
+    "reusedCount": "Components Reused",
+    "cycles": "Reuse Cycles",
+    "badges": "Badges",
+    "projectsCount": "Verified Builds",
+    "builderScore": "Builder Score",
+    "topDifficulty": "Highest Tier",
+    "yourRank": "Your Standing",
+    "emptyEco": "No circular point events recorded yet. Complete physical builds or exchange components to earn points!",
+    "emptyBuilder": "No verified completed projects yet. Complete a 3D build and record assembly to rank up!"
+  },
+  "impact": {
+    "title": "Hardware Impact & Circular Ledger",
+    "subtitle": "Transparent, empirically verified hardware diversion accounting. Real grams salvaged, never simulated carbon offsets.",
+    "divertedMass": "Salvaged Hardware Mass",
+    "grams": "grams",
+    "totalCycles": "Documented Reuse Cycles",
+    "physicalBuilds": "Physical Assemblies",
+    "activeInCirculation": "Components in Circulation",
+    "sharedExchanged": "Exchanged Between Makers",
+    "mentorSessions": "Community Mentorships",
+    "recentActivity": "Live Reuse Ledger Activity",
+    "auditDisclaimerTitle": "Physical Measurement Integrity",
+    "auditDisclaimer": "EcoBuild tracks verified component mass (grams) and lifecycle transitions. We deliberately do not present speculative carbon offset credits without a certified third-party Lifecycle Assessment (LCA).",
+    "actionBuild": "Physical Assembly",
+    "actionDisassembly": "Disassembly & Reclaim",
+    "actionExchange": "Exchange Transfer"
+  },
+  "badges": {
+    "eco-starter": {
+      "name": "Eco Starter",
+      "desc": "Began circular journey by cataloging salvaged hardware in inventory."
+    },
+    "component-saver": {
+      "name": "Component Saver",
+      "desc": "Saved 5 or more functional components from electronic waste streams."
+    },
+    "circular-champion": {
+      "name": "Circular Champion",
+      "desc": "Diverted over 150 grams of functional e-waste hardware into active prototypes."
+    },
+    "first-build": {
+      "name": "First Build",
+      "desc": "Successfully completed and recorded 1 physical prototype build."
+    },
+    "ten-projects": {
+      "name": "10 Projects",
+      "desc": "Completed 10 verified hardware builds using circular components."
+    },
+    "master-builder": {
+      "name": "Master Builder",
+      "desc": "Constructed an Advanced tier project and earned over 200 Builder Score points."
+    },
+    "community-helper": {
+      "name": "Community Helper",
+      "desc": "Contributed actively to the maker community via collaboration proposals or exchange."
+    },
+    "mentor": {
+      "name": "Mentor",
+      "desc": "Opted in to guide fellow makers and resolved peer mentorship tickets."
+    },
+    "reuse-champion": {
+      "name": "Reuse Champion",
+      "desc": "Achieved 10 or more lifecycle reuse loops by returning disassembled parts to stock."
+    }
+  },
+  "projects": {
+    "libraryTitle": "Deterministic Project Library",
+    "librarySubtitle": "Engineering recipes matched against your exact physical components with pin-level precision.",
+    "matchRate": "Inventory Match",
+    "readyToBuild": "Ready to Build",
+    "missingParts": "Missing Parts",
+    "requiredComponents": "Required Components",
+    "schematicOverview": "Circuit Schematic & Wiring",
+    "safetyGuidelines": "Bench Safety & Voltage Limits",
+    "troubleshooting": "Empirical Troubleshooting",
+    "recordBuild": "Record Physical Assembly",
+    "stepByStep": "Step-by-Step 3D Guide"
+  },
+  "completion": {
+    "modalTitle": "Record Physical Build Completion",
+    "modalSubtitle": "Verify that you assembled this circuit with physical hardware to earn Eco Points and Builder Progress.",
+    "resultLabel": "Build Verification Result",
+    "working": "Fully Working (All tests pass)",
+    "partial": "Partially Working (Needs debugging)",
+    "failed": "Not Working (Component or wiring issue)",
+    "notesLabel": "Workbench Notes & Observations",
+    "notesPlaceholder": "Describe bench tests, voltage probe results, or assembly challenges...",
+    "confirmComponents": "Confirm Components Used from Inventory",
+    "submit": "Confirm Build & Award Points",
+    "awardedPoints": "Eco Points Earned:",
+    "awardedBuilder": "Builder Score Earned:"
+  }
+}

@@ -13,6 +13,7 @@ import {
   ProjectWorkspace,
   MentorshipRequest,
   WorkspaceTask,
+  ReuseLedgerEntry,
 } from './types';
 import { StorageService } from './services/storageService';
 import { FirestoreAdapter } from './services/firestoreAdapter';
@@ -41,6 +42,8 @@ import { ProfilePage } from './pages/ProfilePage';
 import { MakerNetworkPage } from './pages/MakerNetworkPage';
 import { WorkspaceDetailPage } from './pages/WorkspaceDetailPage';
 import { FutureFeaturePage } from './pages/FutureFeaturePage';
+import { LeaderboardsPage } from './pages/LeaderboardsPage';
+import { ImpactDashboardPage } from './pages/ImpactDashboardPage';
 
 // Lazy-loaded 3D Build Studio module
 const BuildStudioPage = React.lazy(() =>
@@ -106,12 +109,16 @@ function EcoBuildApp() {
   // ----------------------------------------------------
   const [cloudInventory, setCloudInventory] = useState<ComponentItem[]>([]);
   const [cloudSavedIds, setCloudSavedIds] = useState<string[]>([]);
+  const [cloudWorkspaces, setCloudWorkspaces] = useState<ProjectWorkspace[]>([]);
+  const [cloudLedgerEntries, setCloudLedgerEntries] = useState<ReuseLedgerEntry[]>([]);
 
   // Real-time Firestore Subscriptions for authenticated user
   useEffect(() => {
     if (mode !== 'account' || !user) {
       setCloudInventory([]);
       setCloudSavedIds([]);
+      setCloudWorkspaces([]);
+      setCloudLedgerEntries([]);
       return;
     }
 
@@ -125,9 +132,21 @@ function EcoBuildApp() {
       (ids) => setCloudSavedIds(ids)
     );
 
+    const unsubWorkspaces = FirestoreAdapter.subscribeToUserWorkspaces(
+      user.uid,
+      (ws) => setCloudWorkspaces(ws as any)
+    );
+
+    const unsubLedger = FirestoreAdapter.subscribeToReuseLedger(
+      user.uid,
+      (entries) => setCloudLedgerEntries(entries)
+    );
+
     return () => {
       unsubInventory();
       unsubSaved();
+      unsubWorkspaces();
+      unsubLedger();
     };
   }, [mode, user]);
 
@@ -357,38 +376,135 @@ function EcoBuildApp() {
     StorageService.cancelProposal(proposalId);
   }, []);
 
-  // Workspace Handlers
+  // Workspace Handlers (Demo + Cloud Phase 4B2)
   const handleAddTask = useCallback(
-    (workspaceId: string, task: Omit<WorkspaceTask, 'id' | 'createdAt'>) => {
-      StorageService.addWorkspaceTask(workspaceId, task);
+    async (workspaceId: string, task: Omit<WorkspaceTask, 'id' | 'createdAt'>) => {
+      if (mode === 'account') {
+        await FirestoreAdapter.addCloudWorkspaceTask(workspaceId, task);
+      } else {
+        StorageService.addWorkspaceTask(workspaceId, task);
+      }
     },
-    []
+    [mode]
   );
 
   const handleUpdateTask = useCallback(
-    (workspaceId: string, task: WorkspaceTask) => {
-      StorageService.updateWorkspaceTask(workspaceId, task);
+    async (workspaceId: string, task: WorkspaceTask) => {
+      if (mode === 'account') {
+        await FirestoreAdapter.updateCloudWorkspaceTask(workspaceId, task);
+      } else {
+        StorageService.updateWorkspaceTask(workspaceId, task);
+      }
     },
-    []
+    [mode]
   );
 
   const handleDeleteTask = useCallback(
-    (workspaceId: string, taskId: string) => {
-      StorageService.deleteWorkspaceTask(workspaceId, taskId);
+    async (workspaceId: string, taskId: string) => {
+      if (mode === 'account') {
+        await FirestoreAdapter.deleteCloudWorkspaceTask(workspaceId, taskId);
+      } else {
+        StorageService.deleteWorkspaceTask(workspaceId, taskId);
+      }
     },
-    []
+    [mode]
   );
 
   const handleAddWorkspaceMessage = useCallback(
-    (workspaceId: string, message: { authorId: string; content: string }) => {
-      StorageService.addWorkspaceMessage(workspaceId, message);
+    async (workspaceId: string, message: { authorId: string; content: string }) => {
+      if (mode === 'account') {
+        await FirestoreAdapter.addCloudWorkspaceMessage(
+          workspaceId,
+          message
+        );
+      } else {
+        StorageService.addWorkspaceMessage(workspaceId, message);
+      }
     },
-    []
+    [mode]
   );
 
-  const handleCancelWorkspace = useCallback((workspaceId: string) => {
-    StorageService.cancelWorkspace(workspaceId);
-  }, []);
+  const handleCancelWorkspace = useCallback(
+    async (workspaceId: string) => {
+      if (mode === 'account') {
+        await FirestoreAdapter.cancelCloudWorkspace(workspaceId);
+      } else {
+        StorageService.cancelWorkspace(workspaceId);
+      }
+    },
+    [mode]
+  );
+
+  // Physical Build and Disassembly Lifecycle Handlers (Phase 6)
+  const handleRecordPhysicalBuild = useCallback(
+    async (entry: Omit<ReuseLedgerEntry, 'id' | 'timestamp'>) => {
+      const fullEntry: ReuseLedgerEntry = {
+        ...entry,
+        id: `rl-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: new Date().toISOString(),
+      };
+      if (mode === 'account' && user) {
+        await FirestoreAdapter.recordReuseLedgerEntry(user.uid, fullEntry);
+        for (const item of entry.allocatedItems || []) {
+          const currentItem = cloudInventory.find((i) => i.id === item.inventoryItemId);
+          if (currentItem) {
+            const newInstalled = (currentItem.installedQuantity || 0) + item.quantity;
+            await FirestoreAdapter.updateInventoryItem(user.uid, {
+              ...currentItem,
+              installedQuantity: newInstalled,
+            });
+          }
+        }
+      } else {
+        for (const item of entry.allocatedItems || []) {
+          const currentItem = demoInventory.find((i) => i.id === item.inventoryItemId);
+          if (currentItem) {
+            const newInstalled = (currentItem.installedQuantity || 0) + item.quantity;
+            StorageService.updateComponent({
+              ...currentItem,
+              installedQuantity: newInstalled,
+            });
+          }
+        }
+      }
+    },
+    [mode, user, cloudInventory, demoInventory]
+  );
+
+  const handleRecordDisassembly = useCallback(
+    async (entry: Omit<ReuseLedgerEntry, 'id' | 'timestamp'>) => {
+      const fullEntry: ReuseLedgerEntry = {
+        ...entry,
+        id: `rl-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: new Date().toISOString(),
+      };
+      if (mode === 'account' && user) {
+        await FirestoreAdapter.recordReuseLedgerEntry(user.uid, fullEntry);
+        for (const item of entry.allocatedItems || []) {
+          const currentItem = cloudInventory.find((i) => i.id === item.inventoryItemId);
+          if (currentItem) {
+            const newInstalled = Math.max(0, (currentItem.installedQuantity || 0) - item.quantity);
+            await FirestoreAdapter.updateInventoryItem(user.uid, {
+              ...currentItem,
+              installedQuantity: newInstalled,
+            });
+          }
+        }
+      } else {
+        for (const item of entry.allocatedItems || []) {
+          const currentItem = demoInventory.find((i) => i.id === item.inventoryItemId);
+          if (currentItem) {
+            const newInstalled = Math.max(0, (currentItem.installedQuantity || 0) - item.quantity);
+            StorageService.updateComponent({
+              ...currentItem,
+              installedQuantity: newInstalled,
+            });
+          }
+        }
+      }
+    },
+    [mode, user, cloudInventory, demoInventory]
+  );
 
   // Mentorship Handlers
   const handleSubmitMentorRequest = useCallback(
@@ -512,6 +628,9 @@ function EcoBuildApp() {
                 onEdit={handleEditComponent}
                 onDelete={handleDeleteComponent}
                 onOpenResetDemo={() => setIsResetDemoOpen(true)}
+                ledgerEntries={cloudLedgerEntries}
+                onRecordPhysicalBuild={handleRecordPhysicalBuild}
+                onRecordDisassembly={handleRecordDisassembly}
               />
             </Route>
 
@@ -563,7 +682,7 @@ function EcoBuildApp() {
             {/* Working Project Workspace Room */}
             <Route path="/workspaces/:id">
               <WorkspaceDetailPage
-                workspaces={demoWorkspaces}
+                workspaces={mode === 'account' ? (cloudWorkspaces as any) : demoWorkspaces}
                 projects={PROJECT_LIBRARY}
                 allMakers={demoAllMakers}
                 activeUser={activeUser}
@@ -651,8 +770,20 @@ function EcoBuildApp() {
               </React.Suspense>
             </Route>
 
+            <Route path="/leaderboards">
+              <LeaderboardsPage
+                activeUser={activeUser}
+                mode={mode}
+                googleUser={user}
+              />
+            </Route>
+
             <Route path="/impact">
-              <FutureFeaturePage type="impact" />
+              <ImpactDashboardPage
+                ledgerEntries={cloudLedgerEntries}
+                mode={mode}
+                inventory={inventory}
+              />
             </Route>
 
             {/* Fallback */}

@@ -33,6 +33,12 @@ import {
   SMART_DUSTBIN_PINS,
 } from '../studio/data/smartDustbinRecipe';
 import {
+  NIGHT_LIGHT_STEPS,
+  NIGHT_LIGHT_COMPONENTS,
+  NIGHT_LIGHT_WIRES,
+  NIGHT_LIGHT_PINS,
+} from '../studio/data/nightLightRecipe';
+import {
   CameraPreset,
   PinEndpoint,
   WireConnection,
@@ -42,8 +48,10 @@ import {
 import { PROJECT_LIBRARY } from '../data/projectLibrary';
 import { StorageService } from '../services/storageService';
 import { FirestoreAdapter } from '../services/firestoreAdapter';
-import { ComponentItem, MakerProfile } from '../types';
+import { ComponentItem, MakerProfile, CompletedProjectRecord } from '../types';
 import { ComponentPassportModal } from '../components/inventory/ComponentPassportModal';
+import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal';
+import { NightLightSimulatorPanel } from '../studio/components/NightLightSimulatorPanel';
 
 interface BuildStudioPageProps {
   activeUser: MakerProfile;
@@ -81,8 +89,16 @@ export function BuildStudioPage({
     );
   }, [projectId]);
 
-  const isSupportedProject = project.id === 'proj-smart-dustbin';
-  const steps = SMART_DUSTBIN_STEPS;
+  const isSupportedProject = project.id === 'proj-smart-dustbin' || project.id === 'proj-night-light';
+  const isNightLight = project.id === 'proj-night-light';
+
+  const steps = isNightLight ? NIGHT_LIGHT_STEPS : SMART_DUSTBIN_STEPS;
+  const components = isNightLight ? NIGHT_LIGHT_COMPONENTS : SMART_DUSTBIN_COMPONENTS;
+  const wires = isNightLight ? NIGHT_LIGHT_WIRES : SMART_DUSTBIN_WIRES;
+  const pins = isNightLight ? NIGHT_LIGHT_PINS : SMART_DUSTBIN_PINS;
+
+  const [ambientLightPercent, setAmbientLightPercent] = useState<number>(70);
+  const [showCompletionModal, setShowCompletionModal] = useState<boolean>(false);
 
   // Load persistent guide progress scoped by:
   // Maker ID + Project ID + Recipe Version + Workspace ID
@@ -524,17 +540,17 @@ export function BuildStudioPage({
   // Selected component for inspector panel
   const selectedComponentSpec = useMemo(() => {
     if (!selectedComponentId) return null;
-    return SMART_DUSTBIN_COMPONENTS.find((c) => c.id === selectedComponentId) || null;
-  }, [selectedComponentId]);
+    return components.find((c) => c.id === selectedComponentId) || null;
+  }, [selectedComponentId, components]);
 
   // Connected wires for hovered pin
   const connectedWiresForPin = useMemo(() => {
     if (!hoveredPin && !selectedPin) return [];
     const pin = hoveredPin || selectedPin;
-    return SMART_DUSTBIN_WIRES.filter(
+    return wires.filter(
       (w) => w.fromPinId === pin?.id || w.toPinId === pin?.id
     );
-  }, [hoveredPin, selectedPin]);
+  }, [hoveredPin, selectedPin, wires]);
 
   // Check if user has previously completed steps
   const hasSavedProgress = completedStepIndices.length > 0;
@@ -556,7 +572,7 @@ export function BuildStudioPage({
               3D Studio: {project.name}
             </h1>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Interactive 3D assembly models and expected behavior preview are currently available for the <strong>Smart Dustbin (Touchless Lid Opener)</strong> recipe. Interactive 3D guides for <em>{project.name}</em> are coming in a future update.
+              Interactive 3D assembly models and expected behavior preview are currently available for the <strong>Smart Dustbin</strong> and <strong>Automatic Night Light</strong> recipes. Interactive 3D guides for <em>{project.name}</em> are coming in a future update.
             </p>
           </div>
 
@@ -634,7 +650,15 @@ export function BuildStudioPage({
           </div>
 
           {/* Quick Action Badges */}
-          <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+            <button
+              onClick={() => setShowCompletionModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Complete Build</span>
+            </button>
+
             <button
               onClick={() => setShowSimulatorPanel((prev) => !prev)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
@@ -707,14 +731,19 @@ export function BuildStudioPage({
         >
           <StudioCanvas
             currentStep={currentStep}
-            components={SMART_DUSTBIN_COMPONENTS}
-            wires={SMART_DUSTBIN_WIRES}
-            pins={SMART_DUSTBIN_PINS}
-            simulationState={simulationState}
+            components={components}
+            wires={wires}
+            pins={pins}
+            simulationState={{
+              ...simulationState,
+              isTriggered: isNightLight ? ambientLightPercent < 40 : simulationState.isTriggered,
+            }}
             selectedComponentId={selectedComponentId}
             highlightWireId={selectedWire?.id || hoveredWire?.id || null}
             cameraPosition={cameraPosition}
             cameraTarget={cameraTarget}
+            projectId={project.id}
+            ambientLightLuxPercent={ambientLightPercent}
             onSelectComponent={(id) => setSelectedComponentId(id)}
             onHoverPin={(pin) => setHoveredPin(pin)}
             onSelectPin={(pin) => setSelectedPin(pin)}
@@ -819,14 +848,22 @@ export function BuildStudioPage({
             />
           ) : showSimulatorPanel ? (
             /* Behavior Simulator Panel */
-            <BehaviorSimulatorPanel
-              simulationState={simulationState}
-              onDistanceChange={handleDistanceChange}
-              onApproachHand={handleApproachHand}
-              onRetractHand={handleRetractHand}
-              onPassByWave={handlePassByWave}
-              onResetSimulation={handleResetSimulation}
-            />
+            isNightLight ? (
+              <NightLightSimulatorPanel
+                ambientLightPercent={ambientLightPercent}
+                onAmbientLightChange={(val) => setAmbientLightPercent(val)}
+                onResetSimulation={() => setAmbientLightPercent(70)}
+              />
+            ) : (
+              <BehaviorSimulatorPanel
+                simulationState={simulationState}
+                onDistanceChange={handleDistanceChange}
+                onApproachHand={handleApproachHand}
+                onRetractHand={handleRetractHand}
+                onPassByWave={handlePassByWave}
+                onResetSimulation={handleResetSimulation}
+              />
+            )
           ) : (
             /* Bench Parts Manifest Card */
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
@@ -847,7 +884,7 @@ export function BuildStudioPage({
               </div>
 
               <div className="space-y-2">
-                {SMART_DUSTBIN_COMPONENTS.filter((c) => c.id !== 'comp-dustbin').map((comp) => {
+                {components.filter((c) => c.id !== 'comp-dustbin').map((comp) => {
                   const owned = inventory.find((i) => i.catalogId === comp.catalogId);
 
                   return (
@@ -946,6 +983,89 @@ export function BuildStudioPage({
           isOpen={Boolean(inspectedPassportItem)}
           onClose={() => setInspectedPassportItem(null)}
           item={inspectedPassportItem}
+        />
+      )}
+
+      {/* Project Completion & Reuse Recording Modal */}
+      {showCompletionModal && (
+        <ProjectCompletionModal
+          isOpen={showCompletionModal}
+          onClose={() => setShowCompletionModal(false)}
+          projectId={project.id}
+          projectTitle={project.name}
+          difficulty={project.difficulty}
+          requiredComponents={project.requirements}
+          userInventory={inventory}
+          activeUser={activeUser}
+          onCompleteBuild={async (record, allocatedItems, shouldPublishShowcase) => {
+            if (!activeUser.isDemo) {
+              await FirestoreAdapter.recordCompletedProject(activeUser.id, record);
+              await FirestoreAdapter.recordReuseLedgerEntry(activeUser.id, {
+                id: `rl-build-${Date.now().toString(36)}`,
+                action: 'physical-build',
+                projectId: project.id,
+                projectTitle: project.name,
+                timestamp: new Date().toISOString(),
+                unitMassGrams: record.hardwareMassGrams || 120,
+                notes: record.notes,
+                allocatedItems: allocatedItems.map((a) => ({
+                  inventoryItemId: a.inventoryItemId,
+                  catalogId: a.catalogId,
+                  name: project.requirements.find((r) => r.catalogId === a.catalogId)?.name || 'Salvaged Component',
+                  quantity: a.quantity,
+                  unitMassGrams: 30,
+                })),
+              });
+              await FirestoreAdapter.awardEcoPoints(activeUser.id, {
+                userId: activeUser.id,
+                eventType: 'physical-build',
+                points: 50,
+                referenceType: 'build',
+                referenceId: project.id,
+                reason: `Verified physical build: ${project.name}`,
+              });
+              if (shouldPublishShowcase) {
+                await FirestoreAdapter.publishShowcaseProject({
+                  id: `sc-${Date.now().toString(36)}`,
+                  authorId: activeUser.id,
+                  authorDisplayName: activeUser.displayName,
+                  title: project.name,
+                  description: record.notes || `Assembled using salvaged electronics.`,
+                  photoURL: record.photoURL,
+                  reuseMassGrams: record.hardwareMassGrams || 120,
+                  createdAt: new Date().toISOString(),
+                });
+              }
+            } else {
+              StorageService.recordCompletedProject(record);
+              StorageService.recordReuseLedgerEntry({
+                id: `rl-build-${Date.now().toString(36)}`,
+                action: 'physical-build',
+                projectId: project.id,
+                projectName: project.name,
+                timestamp: new Date().toISOString(),
+                unitMassGrams: record.hardwareMassGrams || 120,
+                notes: record.notes,
+                allocatedItems: allocatedItems.map((a) => ({
+                  inventoryItemId: a.inventoryItemId,
+                  catalogId: a.catalogId,
+                  name: project.requirements.find((r) => r.catalogId === a.catalogId)?.name || 'Salvaged Component',
+                  quantity: a.quantity,
+                  unitMassGrams: 30,
+                })),
+              });
+              if (shouldPublishShowcase) {
+                StorageService.publishShowcaseProject({
+                  authorId: activeUser.id,
+                  authorDisplayName: activeUser.displayName,
+                  title: project.name,
+                  description: record.notes || `Assembled using salvaged electronics.`,
+                  photoURL: record.photoURL,
+                  reuseMassGrams: record.hardwareMassGrams || 120,
+                });
+              }
+            }
+          }}
         />
       )}
     </div>

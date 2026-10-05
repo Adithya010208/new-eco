@@ -13,6 +13,14 @@ import {
   ComponentReservation,
   WorkspaceTask,
   WorkspaceMessage,
+  EcoPointEventType,
+  EcoPointTransaction,
+  CompletedProjectRecord,
+  ReuseLedgerEntry,
+  EcoLeaderboardEntry,
+  BuilderLeaderboardEntry,
+  ComponentExchangeListing,
+  ShowcaseProject,
 } from '../types';
 import { BuildGuideProgress } from '../studio/types';
 import { SEED_INVENTORY } from '../data/seedInventory';
@@ -23,6 +31,12 @@ import {
   SEED_MENTOR_REQUESTS,
 } from '../data/seedNetwork';
 import { PROJECT_LIBRARY } from '../data/projectLibrary';
+import {
+  ECO_POINT_VALUES,
+  calculateEcoRank,
+  calculateBuilderRank,
+  evaluateBadges,
+} from '../utils/gamification';
 
 // Storage Keys
 const STORAGE_VERSION_KEY = 'ecobuild_storage_version';
@@ -34,6 +48,10 @@ const WORKSPACES_KEY = 'ecobuild_workspaces_v2';
 const MENTOR_REQUESTS_KEY = 'ecobuild_mentor_requests_v2';
 const SAVED_PROJECTS_KEY = 'ecobuild_saved_projects_v1';
 const GUIDE_PROGRESS_KEY = 'ecobuild_guide_progress_v1';
+const ECO_POINTS_KEY = 'ecobuild_eco_points_v2';
+const COMPLETED_PROJECTS_KEY = 'ecobuild_completed_projects_v2';
+const REUSE_LEDGER_KEY = 'ecobuild_reuse_ledger_v2';
+const EXCHANGE_LISTINGS_KEY = 'ecobuild_exchange_listings_v2';
 
 // Legacy keys for migration
 const LEGACY_PROFILE_KEY = 'ecobuild_profile_v1';
@@ -49,6 +67,398 @@ export const DEFAULT_PROFILE: UserProfile = {
 };
 
 export const DEFAULT_SAVED_PROJECTS = ['proj-smart-dustbin'];
+
+export const SEED_ECO_POINTS: EcoPointTransaction[] = [
+  {
+    id: 'tx-adithya-1',
+    userId: 'maker-adithya',
+    eventType: 'physical-build',
+    points: 50,
+    referenceType: 'project',
+    referenceId: 'proj-smart-dustbin',
+    createdAt: '2026-03-20T10:00:00Z',
+    reason: 'Verified physical assembly of Smart Dustbin prototype',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-adithya-2',
+    userId: 'maker-adithya',
+    eventType: 'component-shared',
+    points: 10,
+    referenceType: 'component',
+    referenceId: 'inv-hc-sr04',
+    createdAt: '2026-03-21T14:30:00Z',
+    reason: 'Shared HC-SR04 ultrasonic sensor with campus maker community',
+    verificationSource: 'peer-exchange',
+  },
+  {
+    id: 'tx-elena-1',
+    userId: 'maker-elena',
+    eventType: 'physical-build',
+    points: 50,
+    referenceType: 'project',
+    referenceId: 'proj-night-light',
+    createdAt: '2026-03-10T12:00:00Z',
+    reason: 'Verified physical assembly of Automatic Night Light',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-elena-2',
+    userId: 'maker-elena',
+    eventType: 'physical-build',
+    points: 50,
+    referenceType: 'project',
+    referenceId: 'proj-obstacle-rover',
+    createdAt: '2026-03-18T16:00:00Z',
+    reason: 'Verified physical assembly of Obstacle Avoiding Rover',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-elena-3',
+    userId: 'maker-elena',
+    eventType: 'reuse-cycle',
+    points: 30,
+    referenceType: 'cycle',
+    referenceId: 'cycle-elena-chassis',
+    createdAt: '2026-03-22T09:15:00Z',
+    reason: 'Disassembled older chassis and returned L298N motor driver to stock',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-elena-4',
+    userId: 'maker-elena',
+    eventType: 'collaboration-completed',
+    points: 35,
+    referenceType: 'workspace',
+    referenceId: 'ws-team-rover',
+    createdAt: '2026-03-25T11:00:00Z',
+    reason: 'Completed team robotics workspace with Adithya',
+    verificationSource: 'peer-exchange',
+  },
+  {
+    id: 'tx-elena-5',
+    userId: 'maker-elena',
+    eventType: 'exchange-completed',
+    points: 25,
+    referenceType: 'exchange',
+    referenceId: 'ex-gear-motor',
+    createdAt: '2026-03-27T14:00:00Z',
+    reason: 'Completed surplus gearmotor handover to Marcus',
+    verificationSource: 'peer-exchange',
+  },
+  {
+    id: 'tx-marcus-1',
+    userId: 'maker-marcus',
+    eventType: 'physical-build',
+    points: 50,
+    referenceType: 'project',
+    referenceId: 'proj-plant-monitor',
+    createdAt: '2026-03-15T08:00:00Z',
+    reason: 'Verified physical build of Smart Plant Monitor',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-marcus-2',
+    userId: 'maker-marcus',
+    eventType: 'reuse-cycle',
+    points: 30,
+    referenceType: 'cycle',
+    referenceId: 'cycle-marcus-probe',
+    createdAt: '2026-03-22T10:00:00Z',
+    reason: 'Reclaimed soil moisture sensor from completed semester trial',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-marcus-3',
+    userId: 'maker-marcus',
+    eventType: 'collaboration-completed',
+    points: 35,
+    referenceType: 'workspace',
+    referenceId: 'ws-greenhouse-net',
+    createdAt: '2026-03-24T15:00:00Z',
+    reason: 'Delivered telemetry module in shared greenhouse workspace',
+    verificationSource: 'peer-exchange',
+  },
+  {
+    id: 'tx-vance-1',
+    userId: 'maker-vance',
+    eventType: 'mentorship-resolved',
+    points: 20,
+    referenceType: 'mentorship',
+    referenceId: 'ticket-vance-1',
+    createdAt: '2026-03-12T14:00:00Z',
+    reason: 'Resolved circuit troubleshooting mentorship ticket',
+    verificationSource: 'mentor-verification',
+  },
+  {
+    id: 'tx-vance-2',
+    userId: 'maker-vance',
+    eventType: 'mentorship-resolved',
+    points: 20,
+    referenceType: 'mentorship',
+    referenceId: 'ticket-vance-2',
+    createdAt: '2026-03-19T17:00:00Z',
+    reason: 'Verified schematic logic probing for beginner maker',
+    verificationSource: 'mentor-verification',
+  },
+  {
+    id: 'tx-vance-3',
+    userId: 'maker-vance',
+    eventType: 'physical-build',
+    points: 50,
+    referenceType: 'project',
+    referenceId: 'proj-garage-parking',
+    createdAt: '2026-03-21T11:00:00Z',
+    reason: 'Constructed ultrasonic parking indicator for lab bay',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-vance-4',
+    userId: 'maker-vance',
+    eventType: 'reuse-cycle',
+    points: 30,
+    referenceType: 'cycle',
+    referenceId: 'cycle-vance-logic',
+    createdAt: '2026-03-24T16:30:00Z',
+    reason: 'Bench-tested and cataloged 5 reclaimed 74HC IC chips',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-vance-5',
+    userId: 'maker-vance',
+    eventType: 'reuse-cycle',
+    points: 30,
+    referenceType: 'cycle',
+    referenceId: 'cycle-vance-power',
+    createdAt: '2026-03-28T09:00:00Z',
+    reason: 'Recertified 12V 2A switching bench power supply',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-vance-6',
+    userId: 'maker-vance',
+    eventType: 'collaboration-completed',
+    points: 35,
+    referenceType: 'workspace',
+    referenceId: 'ws-campus-sensor',
+    createdAt: '2026-03-29T10:00:00Z',
+    reason: 'Supervised senior capstone circular build workspace',
+    verificationSource: 'mentor-verification',
+  },
+  {
+    id: 'tx-priya-1',
+    userId: 'maker-priya',
+    eventType: 'physical-build',
+    points: 50,
+    referenceType: 'project',
+    referenceId: 'proj-night-light',
+    createdAt: '2026-03-23T11:00:00Z',
+    reason: 'Verified physical build of Automatic Night Light',
+    verificationSource: 'physical-ledger',
+  },
+  {
+    id: 'tx-priya-2',
+    userId: 'maker-priya',
+    eventType: 'component-shared',
+    points: 10,
+    referenceType: 'component',
+    referenceId: 'inv-priya-leds',
+    createdAt: '2026-03-25T13:00:00Z',
+    reason: 'Shared multi-color LED assortment for beginner workshop',
+    verificationSource: 'peer-exchange',
+  },
+];
+
+export const SEED_COMPLETED_PROJECTS: CompletedProjectRecord[] = [
+  {
+    id: 'cp-adithya-dustbin',
+    userId: 'maker-adithya',
+    projectId: 'proj-smart-dustbin',
+    projectTitle: 'Smart Touchless Dustbin',
+    difficulty: 'Beginner',
+    completedAt: '2026-03-20T10:00:00Z',
+    notes: 'Bench tested with 5V USB power. Servo lid opens reliably at 15cm threshold.',
+    buildResult: 'working',
+    reusedComponentsCount: 4,
+    hardwareMassGrams: 155,
+    verificationLevel: 'bench-verified',
+  },
+  {
+    id: 'cp-elena-nightlight',
+    userId: 'maker-elena',
+    projectId: 'proj-night-light',
+    projectTitle: 'Automatic Night Light',
+    difficulty: 'Beginner',
+    completedAt: '2026-03-10T12:00:00Z',
+    notes: 'LDR voltage divider tuned with 10k resistor. Tested in darkened room.',
+    buildResult: 'working',
+    reusedComponentsCount: 3,
+    hardwareMassGrams: 85,
+    verificationLevel: 'bench-verified',
+  },
+  {
+    id: 'cp-elena-rover',
+    userId: 'maker-elena',
+    projectId: 'proj-obstacle-rover',
+    projectTitle: 'Obstacle Avoiding Rover',
+    difficulty: 'Intermediate',
+    completedAt: '2026-03-18T16:00:00Z',
+    notes: 'Dual DC motor drive with L298N shield and front mounted HC-SR04 scanner.',
+    buildResult: 'working',
+    reusedComponentsCount: 6,
+    hardwareMassGrams: 320,
+    verificationLevel: 'bench-verified',
+  },
+  {
+    id: 'cp-marcus-plant',
+    userId: 'maker-marcus',
+    projectId: 'proj-plant-monitor',
+    projectTitle: 'Smart Plant Monitor',
+    difficulty: 'Beginner',
+    completedAt: '2026-03-15T08:00:00Z',
+    notes: 'Capacitive probe calibrated for moisture thresholds with buzzer alert.',
+    buildResult: 'working',
+    reusedComponentsCount: 4,
+    hardwareMassGrams: 120,
+    verificationLevel: 'bench-verified',
+  },
+  {
+    id: 'cp-vance-parking',
+    userId: 'maker-vance',
+    projectId: 'proj-garage-parking',
+    projectTitle: 'Garage Parking Indicator',
+    difficulty: 'Intermediate',
+    completedAt: '2026-03-21T11:00:00Z',
+    notes: 'Tricolor LED distance indication with audible beeps below 30cm.',
+    buildResult: 'working',
+    reusedComponentsCount: 5,
+    hardwareMassGrams: 210,
+    verificationLevel: 'bench-verified',
+  },
+  {
+    id: 'cp-priya-nightlight',
+    userId: 'maker-priya',
+    projectId: 'proj-night-light',
+    projectTitle: 'Automatic Night Light',
+    difficulty: 'Beginner',
+    completedAt: '2026-03-23T11:00:00Z',
+    notes: 'First physical breadboard build. Replaced faulty resistor and verified LED.',
+    buildResult: 'working',
+    reusedComponentsCount: 3,
+    hardwareMassGrams: 85,
+    verificationLevel: 'self-reported-working',
+  },
+];
+
+export const SEED_REUSE_LEDGER: ReuseLedgerEntry[] = [
+  {
+    id: 'rl-adithya-1',
+    action: 'physical-build',
+    projectId: 'proj-smart-dustbin',
+    projectName: 'Smart Touchless Dustbin',
+    timestamp: '2026-03-20T10:00:00Z',
+    unitMassGrams: 155,
+    notes: 'Initial build assembled from salvaged campus electronics.',
+    allocatedItems: [
+      { inventoryItemId: 'inv-arduino-uno', catalogId: 'comp-arduino-uno', quantity: 1 },
+      { inventoryItemId: 'inv-hc-sr04', catalogId: 'comp-ultrasonic-hcsr04', quantity: 1 },
+      { inventoryItemId: 'inv-sg90-servo', catalogId: 'comp-micro-servo-sg90', quantity: 1 },
+      { inventoryItemId: 'inv-breadboard', catalogId: 'comp-breadboard-half', quantity: 1 },
+    ],
+  },
+  {
+    id: 'rl-elena-1',
+    action: 'physical-build',
+    projectId: 'proj-night-light',
+    projectName: 'Automatic Night Light',
+    timestamp: '2026-03-10T12:00:00Z',
+    unitMassGrams: 85,
+    notes: 'Compact night light on mini breadboard.',
+    allocatedItems: [
+      { inventoryItemId: 'elena-inv-1', catalogId: 'comp-arduino-uno', quantity: 1 },
+      { inventoryItemId: 'elena-inv-2', catalogId: 'comp-photoresistor-ldr', quantity: 1 },
+    ],
+  },
+  {
+    id: 'rl-elena-2',
+    action: 'disassembly-reclaim',
+    projectId: 'proj-older-prototype',
+    projectName: 'Reclaimed Early Rover Chassis',
+    timestamp: '2026-03-22T09:15:00Z',
+    unitMassGrams: 140,
+    notes: 'Disassembled completed trial and returned working driver and chassis to stock.',
+    allocatedItems: [
+      { inventoryItemId: 'elena-inv-3', catalogId: 'comp-motor-driver-l298n', quantity: 1 },
+    ],
+  },
+  {
+    id: 'rl-vance-1',
+    action: 'disassembly-reclaim',
+    projectId: 'proj-lab-rig',
+    projectName: 'Bench Test Rig Reclaim',
+    timestamp: '2026-03-24T16:30:00Z',
+    unitMassGrams: 180,
+    notes: 'Recertified components returned to departmental circulating stock.',
+    allocatedItems: [],
+  },
+];
+
+export const SEED_EXCHANGE_LISTINGS: ComponentExchangeListing[] = [
+  {
+    id: 'ex-seed-1',
+    ownerId: 'maker-elena',
+    ownerDisplayName: 'Elena Rostova',
+    componentInventoryId: 'elena-inv-surplus-motor',
+    catalogId: 'comp-dc-gearmotor',
+    componentName: 'Yellow TT DC Gear Motor (6V Dual Shaft)',
+    category: 'actuator',
+    quantity: 2,
+    condition: 'working',
+    verificationStatus: 'recorded-test',
+    exchangeType: 'free-donation',
+    status: 'available',
+    approximateLocation: 'Robotics Wing Drop Box (Bin #4)',
+    notes: 'Tested with 4.5V bench pack. Includes pre-soldered 15cm lead wires.',
+    createdAt: '2026-03-24T10:00:00Z',
+    updatedAt: '2026-03-24T10:00:00Z',
+  },
+  {
+    id: 'ex-seed-2',
+    ownerId: 'maker-marcus',
+    ownerDisplayName: 'Marcus Chen',
+    componentInventoryId: 'marcus-inv-oled',
+    catalogId: 'comp-oled-096-i2c',
+    componentName: '0.96" I2C Monochrome OLED Display (128x64)',
+    category: 'display',
+    quantity: 1,
+    condition: 'working',
+    verificationStatus: 'recorded-test',
+    exchangeType: 'swap-preferred',
+    status: 'available',
+    approximateLocation: 'Civic Hardware Collective Drop-off',
+    notes: 'Works perfectly on address 0x3C. Looking for analog pressure sensors.',
+    createdAt: '2026-03-25T14:30:00Z',
+    updatedAt: '2026-03-25T14:30:00Z',
+  },
+  {
+    id: 'ex-seed-3',
+    ownerId: 'maker-vance',
+    ownerDisplayName: 'Dr. Robert Vance',
+    componentInventoryId: 'vance-inv-logic',
+    catalogId: 'comp-74hc595-shift-reg',
+    componentName: '74HC595 8-bit Shift Register IC (DIP-16)',
+    category: 'passive',
+    quantity: 5,
+    condition: 'working',
+    verificationStatus: 'recorded-test',
+    exchangeType: 'free-donation',
+    status: 'available',
+    approximateLocation: 'Innovation Lab Staff Bench',
+    notes: 'Surplus from lab instrumentation kit. Tested and anti-static bagged.',
+    createdAt: '2026-03-26T09:00:00Z',
+    updatedAt: '2026-03-26T09:00:00Z',
+  },
+];
 
 type Listener = () => void;
 const listeners: Set<Listener> = new Set();
@@ -68,7 +478,22 @@ function notifyListeners() {
  * Adithya's inventory and profile are preserved strictly.
  */
 function ensureMigratedToV2() {
+  if (typeof localStorage === 'undefined') return;
   try {
+    // Check and seed new Phase 2/3 collections unconditionally if missing
+    if (!localStorage.getItem(ECO_POINTS_KEY)) {
+      localStorage.setItem(ECO_POINTS_KEY, JSON.stringify(SEED_ECO_POINTS));
+    }
+    if (!localStorage.getItem(COMPLETED_PROJECTS_KEY)) {
+      localStorage.setItem(COMPLETED_PROJECTS_KEY, JSON.stringify(SEED_COMPLETED_PROJECTS));
+    }
+    if (!localStorage.getItem(REUSE_LEDGER_KEY)) {
+      localStorage.setItem(REUSE_LEDGER_KEY, JSON.stringify(SEED_REUSE_LEDGER));
+    }
+    if (!localStorage.getItem(EXCHANGE_LISTINGS_KEY)) {
+      localStorage.setItem(EXCHANGE_LISTINGS_KEY, JSON.stringify(SEED_EXCHANGE_LISTINGS));
+    }
+
     const version = localStorage.getItem(STORAGE_VERSION_KEY);
     if (version === 'v2') return;
 
@@ -1010,6 +1435,509 @@ export const StorageService = {
   },
 
   // ==========================================
+  // Eco Points System (Phase 2)
+  // ==========================================
+
+  getEcoPointTransactions(userId?: string): EcoPointTransaction[] {
+    ensureMigratedToV2();
+    try {
+      const data = localStorage.getItem(ECO_POINTS_KEY);
+      const all: EcoPointTransaction[] = data ? JSON.parse(data) : SEED_ECO_POINTS;
+      if (userId) {
+        return all.filter((tx) => tx.userId === userId);
+      }
+      return all;
+    } catch (e) {
+      console.error('Failed reading eco point transactions:', e);
+      return SEED_ECO_POINTS;
+    }
+  },
+
+  awardEcoPoints(
+    tx: Omit<EcoPointTransaction, 'id' | 'createdAt'>
+  ): EcoPointTransaction | null {
+    ensureMigratedToV2();
+    try {
+      const existing = this.getEcoPointTransactions();
+      // Deduplication check: cannot award duplicate points for same action reference
+      if (tx.referenceType && tx.referenceId) {
+        const alreadyAwarded = existing.some(
+          (t) =>
+            t.userId === tx.userId &&
+            t.referenceType === tx.referenceType &&
+            t.referenceId === tx.referenceId
+        );
+        if (alreadyAwarded) {
+          console.warn('[EcoBuild] Eco points already awarded for:', tx.referenceType, tx.referenceId);
+          return null;
+        }
+      }
+
+      const fullTx: EcoPointTransaction = {
+        ...tx,
+        id: `tx-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const updated = [fullTx, ...existing];
+      localStorage.setItem(ECO_POINTS_KEY, JSON.stringify(updated));
+      notifyListeners();
+      return fullTx;
+    } catch (e) {
+      console.error('Failed awarding eco points:', e);
+      return null;
+    }
+  },
+
+  // ==========================================
+  // Builder Progress & Projects (Phase 3 & 10)
+  // ==========================================
+
+  getCompletedProjects(userId?: string): CompletedProjectRecord[] {
+    ensureMigratedToV2();
+    try {
+      const data = localStorage.getItem(COMPLETED_PROJECTS_KEY);
+      const all: CompletedProjectRecord[] = data ? JSON.parse(data) : SEED_COMPLETED_PROJECTS;
+      if (userId) {
+        return all.filter((cp) => cp.userId === userId);
+      }
+      return all;
+    } catch (e) {
+      console.error('Failed reading completed projects:', e);
+      return SEED_COMPLETED_PROJECTS;
+    }
+  },
+
+  recordCompletedProject(
+    record: Omit<CompletedProjectRecord, 'id' | 'completedAt'>
+  ): CompletedProjectRecord | null {
+    ensureMigratedToV2();
+    try {
+      const existing = this.getCompletedProjects();
+      const alreadyCompleted = existing.some(
+        (cp) => cp.userId === record.userId && cp.projectId === record.projectId
+      );
+
+      const fullRecord: CompletedProjectRecord = {
+        ...record,
+        id: `cp-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        completedAt: new Date().toISOString(),
+      };
+
+      if (!alreadyCompleted) {
+        localStorage.setItem(COMPLETED_PROJECTS_KEY, JSON.stringify([fullRecord, ...existing]));
+
+        // Award verified physical build eco points (50 points)
+        this.awardEcoPoints({
+          userId: record.userId,
+          eventType: 'physical-build',
+          points: ECO_POINT_VALUES['physical-build'],
+          referenceType: 'project',
+          referenceId: record.projectId,
+          reason: `Verified physical completion of ${record.projectTitle}`,
+          verificationSource: 'physical-ledger',
+        });
+      } else {
+        // Update existing record if repeated build
+        const updated = existing.map((cp) =>
+          cp.userId === record.userId && cp.projectId === record.projectId ? fullRecord : cp
+        );
+        localStorage.setItem(COMPLETED_PROJECTS_KEY, JSON.stringify(updated));
+      }
+
+      notifyListeners();
+      return fullRecord;
+    } catch (e) {
+      console.error('Failed recording completed project:', e);
+      return null;
+    }
+  },
+
+  // ==========================================
+  // Hardware Reuse Ledger (Phase 1 & 12)
+  // ==========================================
+
+  getReuseLedger(userId?: string): ReuseLedgerEntry[] {
+    ensureMigratedToV2();
+    try {
+      const data = localStorage.getItem(REUSE_LEDGER_KEY);
+      return data ? JSON.parse(data) : SEED_REUSE_LEDGER;
+    } catch (e) {
+      console.error('Failed reading reuse ledger:', e);
+      return SEED_REUSE_LEDGER;
+    }
+  },
+
+  recordReuseLedgerEntry(entry: ReuseLedgerEntry): ReuseLedgerEntry {
+    ensureMigratedToV2();
+    try {
+      const existing = this.getReuseLedger();
+      const updated = [entry, ...existing];
+      localStorage.setItem(REUSE_LEDGER_KEY, JSON.stringify(updated));
+
+      // If disassembly-reclaim, award 30 reuse cycle eco points
+      const activeUser = this.getActiveUser();
+      if (entry.action === 'disassembly-reclaim' && activeUser) {
+        this.awardEcoPoints({
+          userId: activeUser.id,
+          eventType: 'reuse-cycle',
+          points: ECO_POINT_VALUES['reuse-cycle'],
+          referenceType: 'cycle',
+          referenceId: entry.id,
+          reason: `Reclaimed components from ${entry.projectName || 'hardware project'}`,
+          verificationSource: 'physical-ledger',
+        });
+      }
+
+      notifyListeners();
+      return entry;
+    } catch (e) {
+      console.error('Failed recording reuse ledger entry:', e);
+      return entry;
+    }
+  },
+
+  // ==========================================
+  // Component Exchange & Atomic Handover (Phase 9)
+  // ==========================================
+
+  getExchangeListings(): ComponentExchangeListing[] {
+    ensureMigratedToV2();
+    try {
+      const data = localStorage.getItem(EXCHANGE_LISTINGS_KEY);
+      return data ? JSON.parse(data) : SEED_EXCHANGE_LISTINGS;
+    } catch (e) {
+      console.error('Failed reading exchange listings:', e);
+      return SEED_EXCHANGE_LISTINGS;
+    }
+  },
+
+  publishExchangeListing(listing: ComponentExchangeListing): void {
+    ensureMigratedToV2();
+    try {
+      const existing = this.getExchangeListings();
+      const updated = [listing, ...existing];
+      localStorage.setItem(EXCHANGE_LISTINGS_KEY, JSON.stringify(updated));
+
+      // Award 10 Eco Points for sharing a surplus component
+      this.awardEcoPoints({
+        userId: listing.ownerId,
+        eventType: 'component-shared',
+        points: ECO_POINT_VALUES['component-shared'],
+        referenceType: 'component',
+        referenceId: listing.id,
+        reason: `Offered ${listing.componentName} for circular community reuse`,
+        verificationSource: 'peer-exchange',
+      });
+
+      notifyListeners();
+    } catch (e) {
+      console.error('Failed publishing exchange listing:', e);
+    }
+  },
+
+  updateExchangeListingStatus(
+    listingId: string,
+    status: ComponentExchangeListing['status'],
+    requesterId?: string,
+    requesterDisplayName?: string
+  ): void {
+    ensureMigratedToV2();
+    try {
+      const existing = this.getExchangeListings();
+      const updated = existing.map((l) => {
+        if (l.id !== listingId) return l;
+        const next: ComponentExchangeListing = {
+          ...l,
+          status,
+          updatedAt: new Date().toISOString(),
+        };
+        if (requesterId) next.requesterId = requesterId;
+        if (requesterDisplayName) next.requesterDisplayName = requesterDisplayName;
+        return next;
+      });
+      localStorage.setItem(EXCHANGE_LISTINGS_KEY, JSON.stringify(updated));
+      notifyListeners();
+    } catch (e) {
+      console.error('Failed updating exchange listing status:', e);
+    }
+  },
+
+  completeExchangeTransfer(
+    listingId: string,
+    recipientId: string
+  ): { success: boolean; error?: string } {
+    ensureMigratedToV2();
+    try {
+      const listings = this.getExchangeListings();
+      const listing = listings.find((l) => l.id === listingId);
+      if (!listing) return { success: false, error: 'Listing not found' };
+      if (listing.status === 'completed') {
+        return { success: false, error: 'Listing has already been completed' };
+      }
+
+      const allInventories = this.getAllInventories();
+      const sellerInventory = allInventories[listing.ownerId] || [];
+      const recipientInventory = allInventories[recipientId] || [];
+
+      // 1. Deduct from Seller
+      const sellerItem = sellerInventory.find(
+        (i) => i.id === listing.componentInventoryId || i.catalogId === listing.catalogId
+      );
+      if (sellerItem) {
+        const remaining = Math.max(0, sellerItem.totalQuantity - listing.quantity);
+        sellerItem.totalQuantity = remaining;
+      }
+
+      // 2. Add / Transfer to Recipient
+      const existingInRecipient = recipientInventory.find((i) => i.catalogId === listing.catalogId);
+      if (existingInRecipient) {
+        existingInRecipient.totalQuantity += listing.quantity;
+        existingInRecipient.lastUpdated = new Date().toISOString();
+        existingInRecipient.reuseCycleCount = (existingInRecipient.reuseCycleCount || 0) + 1;
+      } else {
+        const newItem: ComponentItem = {
+          id: `transferred-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`,
+          ownerId: recipientId,
+          catalogId: listing.catalogId,
+          name: listing.componentName || listing.name || 'Electronic Component',
+          category: listing.category as any,
+          totalQuantity: listing.quantity,
+          reservedQuantity: 0,
+          installedQuantity: 0,
+          condition: listing.condition,
+          source: 'salvaged',
+          unitMassGrams: 35,
+          verificationStatus: (listing.verificationStatus || 'untested') as any,
+          lastUpdated: new Date().toISOString(),
+          isSharedForCollaboration: false,
+          notes: `Transferred from ${listing.ownerDisplayName} via campus exchange drop-off.`,
+          reuseCycleCount: 1,
+        };
+        recipientInventory.push(newItem);
+      }
+
+      allInventories[listing.ownerId] = sellerInventory;
+      allInventories[recipientId] = recipientInventory;
+      localStorage.setItem(INVENTORIES_KEY, JSON.stringify(allInventories));
+
+      // 3. Mark Listing Completed
+      const updatedListings = listings.map((l) =>
+        l.id === listingId
+          ? {
+              ...l,
+              status: 'completed' as const,
+              completedAt: new Date().toISOString(),
+              requesterId: recipientId,
+              updatedAt: new Date().toISOString(),
+            }
+          : l
+      );
+      localStorage.setItem(EXCHANGE_LISTINGS_KEY, JSON.stringify(updatedListings));
+
+      // 4. Create Ledger Audit Record
+      this.recordReuseLedgerEntry({
+        id: `rl-ex-${Date.now().toString(36)}`,
+        action: 'physical-build',
+        projectName: `Exchange Transfer: ${listing.componentName || listing.name || 'Component'}`,
+        timestamp: new Date().toISOString(),
+        unitMassGrams: (listing.quantity || 1) * 35,
+        notes: `Physical handover of ${listing.quantity} unit(s) from ${listing.ownerDisplayName} to ${recipientId}`,
+        allocatedItems: [
+          {
+            inventoryItemId: listing.componentInventoryId || listing.inventoryItemId || 'inv-unknown',
+            catalogId: listing.catalogId,
+            name: listing.componentName || listing.name || 'Component',
+            quantity: listing.quantity,
+            unitMassGrams: 35,
+          },
+        ],
+      });
+
+      // 5. Award Points to Donor and Recipient
+      this.awardEcoPoints({
+        userId: listing.ownerId,
+        eventType: 'exchange-completed',
+        points: ECO_POINT_VALUES['exchange-completed'],
+        referenceType: 'exchange',
+        referenceId: listing.id,
+        reason: `Donated / exchanged ${listing.componentName} to peer maker`,
+        verificationSource: 'peer-exchange',
+      });
+
+      this.awardEcoPoints({
+        userId: recipientId,
+        eventType: 'exchange-completed',
+        points: ECO_POINT_VALUES['exchange-completed'],
+        referenceType: 'exchange',
+        referenceId: listing.id,
+        reason: `Received and recirculated ${listing.componentName}`,
+        verificationSource: 'peer-exchange',
+      });
+
+      notifyListeners();
+      return { success: true };
+    } catch (e: any) {
+      console.error('Failed completeExchangeTransfer:', e);
+      return { success: false, error: e?.message || 'Exchange transfer failed' };
+    }
+  },
+
+  // ==========================================
+  // Dual Leaderboards System (Phase 4)
+  // ==========================================
+
+  getEcoLeaderboard(): EcoLeaderboardEntry[] {
+    ensureMigratedToV2();
+    try {
+      const makers = this.getMakerProfiles();
+      const allTx = this.getEcoPointTransactions();
+      const allLedger = this.getReuseLedger();
+      const allCompleted = this.getCompletedProjects();
+      const allInventories = this.getAllInventories();
+
+      const entries: EcoLeaderboardEntry[] = makers.map((m: MakerProfile) => {
+        const userTx = allTx.filter((t) => t.userId === m.id);
+        const points = userTx.reduce((sum, t) => sum + (t.points || 0), 0);
+        const userLedger = allLedger.filter(
+          (l) => (l.allocatedItems || []).some((item) => item.inventoryItemId?.startsWith(m.id)) || l.id.includes(m.id)
+        );
+        const userInventory = allInventories[m.id] || [];
+        const userCompleted = allCompleted.filter((cp) => cp.userId === m.id);
+
+        const badges = evaluateBadges({
+          ecoPoints: points,
+          inventory: userInventory,
+          ledgerEntries: userLedger,
+          completedProjects: userCompleted,
+          isMentor: m.collaborationPreference === 'Mentoring only',
+        });
+
+        // Calculate components reused from allocations
+        const componentsReusedCount = userLedger.reduce(
+          (sum, e) => sum + (e.allocatedItems || []).reduce((acc, i) => acc + (i.quantity || 1), 0),
+          0
+        ) || (points > 100 ? 5 : 2);
+
+        // Count reuse cycles
+        const reuseCycleCount = userTx.filter((t) => t.eventType === 'reuse-cycle').length || (points > 150 ? 2 : 0);
+
+        return {
+          userId: m.id,
+          displayName: m.displayName,
+          avatarUrl: m.avatarUrl,
+          ecoPoints: points,
+          ecoRank: calculateEcoRank(points),
+          componentsReusedCount,
+          componentsReused: componentsReusedCount,
+          reuseCycleCount,
+          reuseCycles: reuseCycleCount,
+          topBadge: badges.find((b) => b.unlocked)?.name,
+          isCurrentActiveUser: m.id === this.getActiveUser()?.id,
+          isCurrentUser: m.id === this.getActiveUser()?.id,
+          rank: 0,
+        };
+      });
+
+      // Sort descending by ecoPoints
+      entries.sort((a, b) => b.ecoPoints - a.ecoPoints);
+      entries.forEach((e, idx) => {
+        e.rank = idx + 1;
+      });
+
+      return entries;
+    } catch (e) {
+      console.error('Failed computing eco leaderboard:', e);
+      return [];
+    }
+  },
+
+  getBuilderLeaderboard(): BuilderLeaderboardEntry[] {
+    ensureMigratedToV2();
+    try {
+      const makers = this.getMakerProfiles();
+      const allCompleted = this.getCompletedProjects();
+      const allTx = this.getEcoPointTransactions();
+      const allInventories = this.getAllInventories();
+      const allLedger = this.getReuseLedger();
+
+      const entries: BuilderLeaderboardEntry[] = makers.map((m: MakerProfile) => {
+        const userCompleted = allCompleted.filter((cp) => cp.userId === m.id);
+        const count = userCompleted.length;
+
+        // Calculate builder score: Beginner=50, Intermediate=100, Advanced=150
+        const builderScore = userCompleted.reduce((sum, cp) => {
+          const score = cp.difficulty === 'Advanced' ? 150 : cp.difficulty === 'Intermediate' ? 100 : 50;
+          return sum + score;
+        }, 0);
+
+        let highestDifficulty: 'Beginner' | 'Intermediate' | 'Advanced' = 'Beginner';
+        if (userCompleted.some((cp) => cp.difficulty === 'Advanced')) {
+          highestDifficulty = 'Advanced';
+        } else if (userCompleted.some((cp) => cp.difficulty === 'Intermediate')) {
+          highestDifficulty = 'Intermediate';
+        }
+
+        const badges = evaluateBadges({
+          ecoPoints: allTx.filter((t) => t.userId === m.id).reduce((s, t) => s + (t.points || 0), 0),
+          inventory: allInventories[m.id] || [],
+          ledgerEntries: allLedger,
+          completedProjects: userCompleted,
+        });
+
+        return {
+          userId: m.id,
+          displayName: m.displayName,
+          avatarUrl: m.avatarUrl,
+          completedProjectsCount: count,
+          projectsCompleted: count,
+          builderScore,
+          builderRank: calculateBuilderRank(count),
+          highestDifficultyCompleted: highestDifficulty,
+          topBadge: (badges.find((b) => b.unlocked && b.category === 'builder') || badges.find((b) => b.unlocked))?.name,
+          isCurrentActiveUser: m.id === this.getActiveUser()?.id,
+          isCurrentUser: m.id === this.getActiveUser()?.id,
+          rank: 0,
+        };
+      });
+
+      // Sort descending by builderScore, then count
+      entries.sort((a, b) => ((b.builderScore ?? 0) - (a.builderScore ?? 0)) || ((b.completedProjectsCount ?? 0) - (a.completedProjectsCount ?? 0)));
+      entries.forEach((e, idx) => {
+        e.rank = idx + 1;
+      });
+
+      return entries;
+    } catch (e) {
+      console.error('Failed computing builder leaderboard:', e);
+      return [];
+    }
+  },
+
+  getShowcaseProjects(): ShowcaseProject[] {
+    try {
+      const data = localStorage.getItem('ecobuild_showcases');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  publishShowcaseProject(showcase: Omit<ShowcaseProject, 'id' | 'createdAt'>): ShowcaseProject {
+    const full: ShowcaseProject = {
+      ...showcase,
+      id: `showcase-${Date.now().toString(36)}`,
+      createdAt: new Date().toISOString(),
+      likesCount: 0,
+      isPublished: true,
+    };
+    const existing = this.getShowcaseProjects();
+    localStorage.setItem('ecobuild_showcases', JSON.stringify([full, ...existing]));
+    notifyListeners();
+    return full;
+  },
+
+  // ==========================================
   // Reset Demo Action
   // ==========================================
 
@@ -1039,6 +1967,10 @@ export const StorageService = {
         SAVED_PROJECTS_KEY,
         JSON.stringify(DEFAULT_SAVED_PROJECTS)
       );
+      localStorage.setItem(ECO_POINTS_KEY, JSON.stringify(SEED_ECO_POINTS));
+      localStorage.setItem(COMPLETED_PROJECTS_KEY, JSON.stringify(SEED_COMPLETED_PROJECTS));
+      localStorage.setItem(REUSE_LEDGER_KEY, JSON.stringify(SEED_REUSE_LEDGER));
+      localStorage.setItem(EXCHANGE_LISTINGS_KEY, JSON.stringify(SEED_EXCHANGE_LISTINGS));
       localStorage.removeItem(GUIDE_PROGRESS_KEY);
 
       // Legacy key mirrors

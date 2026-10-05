@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { ComponentItem, ComponentCategory, ComponentCondition } from '../types';
+import { ComponentItem, ComponentCategory, ComponentCondition, ReuseLedgerEntry } from '../types';
 import { ComponentCard } from '../components/inventory/ComponentCard';
 import { ComponentPassportModal } from '../components/inventory/ComponentPassportModal';
+import { HardwareReuseLedgerModal } from '../components/inventory/HardwareReuseLedgerModal';
 import {
   Search,
   Plus,
@@ -17,6 +18,7 @@ import {
   AlertTriangle,
   RotateCcw,
   Cpu,
+  Activity,
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
@@ -26,6 +28,9 @@ interface InventoryPageProps {
   onEdit: (item: ComponentItem) => void;
   onDelete: (id: string) => void;
   onOpenResetDemo: () => void;
+  ledgerEntries?: ReuseLedgerEntry[];
+  onRecordPhysicalBuild?: (entry: Omit<ReuseLedgerEntry, 'id' | 'timestamp'>) => void;
+  onRecordDisassembly?: (entry: Omit<ReuseLedgerEntry, 'id' | 'timestamp'>) => void;
 }
 
 export function InventoryPage({
@@ -34,11 +39,15 @@ export function InventoryPage({
   onEdit,
   onDelete,
   onOpenResetDemo,
+  ledgerEntries = [],
+  onRecordPhysicalBuild = () => {},
+  onRecordDisassembly = () => {},
 }: InventoryPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedCondition, setSelectedCondition] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
 
   // Passport preview state
   const [activePassportItem, setActivePassportItem] =
@@ -92,13 +101,24 @@ export function InventoryPage({
           </p>
         </div>
 
-        <button
-          onClick={onAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-xl shadow-xs transition-colors cursor-pointer self-start sm:self-center"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Component</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <button
+            onClick={() => setIsLedgerOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
+            title="View Auditable Hardware Reuse Ledger"
+          >
+            <Activity className="w-4 h-4 text-[#087F83]" />
+            <span>Reuse Ledger ({ledgerEntries.length})</span>
+          </button>
+
+          <button
+            onClick={onAdd}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-xl shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Component</span>
+          </button>
+        </div>
       </div>
 
       {/* Search, Filter Bar & View Toggle */}
@@ -305,6 +325,16 @@ export function InventoryPage({
           </div>
         </div>
       </Modal>
+
+      {/* Hardware Reuse Ledger Modal */}
+      <HardwareReuseLedgerModal
+        isOpen={isLedgerOpen}
+        onClose={() => setIsLedgerOpen(false)}
+        ledgerEntries={ledgerEntries}
+        inventory={inventory}
+        onRecordPhysicalBuild={onRecordPhysicalBuild}
+        onRecordDisassembly={onRecordDisassembly}
+      />
     </div>
   );
 }

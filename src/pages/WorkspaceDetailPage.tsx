@@ -168,27 +168,19 @@ export function WorkspaceDetailPage({
     <div className="space-y-6 pb-16">
       {/* Account Mode Notice */}
       {mode === 'account' && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 text-xs text-slate-700">
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-xs text-slate-700">
           <div className="flex items-center justify-between">
             <span className="font-bold text-[#132B3B] flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Account Mode Active (Phase 4A)
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Phase 4B2 Cloud Collaborative Workspace
             </span>
             <span className="text-[10px] text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200 font-semibold">
-              Phase 4B Preview
+              Cloud Backed
             </span>
           </div>
           <p className="leading-relaxed text-slate-600">
-            Workspaces are currently a local Demo Mode feature. In Account Mode, your private inventory and learning guides are cloud-backed by Cloud Firestore. Real-account collaborative workspaces will arrive in Phase 4B.
+            This collaborative room is synchronized with Cloud Firestore. Only confirmed workspace members ({members.map((m) => m.displayName).join(', ')}) can assign tasks, send messages, and authorize inventory reservations.
           </p>
-          {onSwitchToDemo && (
-            <button
-              onClick={onSwitchToDemo}
-              className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-lg transition-colors cursor-pointer"
-            >
-              Switch to Demo Mode to Collaborate in this Workspace
-            </button>
-          )}
         </div>
       )}
 

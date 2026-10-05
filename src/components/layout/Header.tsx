@@ -1,13 +1,10 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React from 'react';
 import { Link, useLocation } from 'wouter';
+import { useTranslation } from 'react-i18next';
 import { Plus, RotateCcw, Menu, X, Users } from 'lucide-react';
 import { DemoUserSwitcher } from '../common/DemoUserSwitcher';
 import { AuthBadge } from '../common/AuthBadge';
+import { LanguageSelector } from '../common/LanguageSelector';
 import { MakerProfile, CollaborationProposal, MentorshipRequest } from '../../types';
 import { AppMode } from '../../contexts/AuthContext';
 
@@ -23,6 +20,7 @@ interface HeaderProps {
   mentorRequests: MentorshipRequest[];
   onSelectUser: (userId: string) => void;
   mode: AppMode;
+  onLanguageChange?: (lang: 'en' | 'ta' | 'hi') => void;
 }
 
 export function Header({
@@ -37,17 +35,21 @@ export function Header({
   mentorRequests,
   onSelectUser,
   mode,
+  onLanguageChange,
 }: HeaderProps) {
   const [location] = useLocation();
+  const { t } = useTranslation();
 
   const navLinks = [
-    { href: '/', label: 'Discover' },
-    { href: '/components', label: 'My Components' },
-    { href: '/projects', label: 'Project Library' },
-    { href: '/network', label: 'Maker Network' },
-    { href: '/studio', label: '3D Studio' },
-    { href: '/saved', label: 'Saved Projects', count: savedCount },
-    { href: '/profile', label: 'Profile' },
+    { href: '/', label: t('nav.discover', 'Discover') },
+    { href: '/components', label: t('nav.components', 'My Components') },
+    { href: '/projects', label: t('nav.projects', 'Project Library') },
+    { href: '/network', label: t('nav.network', 'Maker Network') },
+    { href: '/studio', label: t('nav.studio', '3D Studio') },
+    { href: '/leaderboards', label: t('nav.leaderboards', 'Leaderboards') },
+    { href: '/impact', label: t('nav.impact', 'Impact & Ledger') },
+    { href: '/saved', label: t('nav.saved', 'Saved Projects'), count: savedCount },
+    { href: '/profile', label: t('nav.profile', 'Profile') },
   ];
 
   return (
@@ -115,6 +117,9 @@ export function Header({
             />
           )}
 
+          {/* Language Selector */}
+          <LanguageSelector onLanguageChange={onLanguageChange} />
+
           {/* Account Mode & Google Sign-In Control */}
           <AuthBadge />
 
@@ -172,6 +177,7 @@ export function Header({
           })}
 
           <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between">
+            <LanguageSelector onLanguageChange={onLanguageChange} />
             <button
               onClick={() => {
                 setMobileMenuOpen(false);

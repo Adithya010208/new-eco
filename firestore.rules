@@ -1,206 +1,887 @@
-  rules_version = '2';
-  service cloud.firestore {
-    match /databases/{database}/documents {
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
 
-      // ==========================================
-      // HELPER FUNCTIONS & VALIDATION BLUEPRINTS
-      // ==========================================
+    // ==========================================
+    // HELPER FUNCTIONS & VALIDATION BLUEPRINTS
+    // ==========================================
 
-      function isAuthenticated() {
-        return request.auth != null && request.auth.uid != null;
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- User Profile Validation ---
+    function isValidUserProfile(data) {
+      return data.keys().hasOnly([
+          'displayName', 'experience', 'interests', 'skills',
+          'preferredDifficulty', 'availableTime', 'collaborationPreference',
+          'email', 'photoURL', 'bio', 'createdAt', 'updatedAt',
+          'ecoPoints', 'ecoRank', 'verifiedCompletedProjects', 'builderRank',
+          'highestDifficultyCompleted', 'preferredLanguage', 'badges'
+        ])
+        && data.keys().hasAll(['displayName', 'experience'])
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 100
+        && data.experience in ['Beginner', 'Intermediate', 'Advanced']
+        && (!('email' in data) || (data.email is string && data.email.size() <= 200))
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+        && (!('interests' in data) || (data.interests is list && data.interests.size() <= 30))
+        && (!('skills' in data) || (data.skills is list && data.skills.size() <= 30))
+        && (!('preferredDifficulty' in data) || data.preferredDifficulty in ['Beginner', 'Intermediate', 'Advanced'])
+        && (!('availableTime' in data) || (data.availableTime is string && data.availableTime.size() <= 100))
+        && (!('collaborationPreference' in data) || data.collaborationPreference in ['Open to team builds', 'Mentoring only', 'Project-specific', 'Solo maker'])
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 500))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50))
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50))
+        && (!('ecoPoints' in data) || (data.ecoPoints is number && data.ecoPoints >= 0))
+        && (!('ecoRank' in data) || (data.ecoRank is string && data.ecoRank.size() <= 50))
+        && (!('verifiedCompletedProjects' in data) || (data.verifiedCompletedProjects is int && data.verifiedCompletedProjects >= 0))
+        && (!('builderRank' in data) || (data.builderRank is string && data.builderRank.size() <= 50))
+        && (!('highestDifficultyCompleted' in data) || data.highestDifficultyCompleted in ['Beginner', 'Intermediate', 'Advanced'])
+        && (!('preferredLanguage' in data) || data.preferredLanguage in ['en', 'ta', 'hi'])
+        && (!('badges' in data) || (data.badges is list && data.badges.size() <= 30));
+    }
+
+    // --- Inventory Item Validation ---
+    // Quantity Invariant: reservedQuantity + installedQuantity <= totalQuantity
+    function isValidInventoryItem(data, uid) {
+      return data.keys().hasOnly([
+          'id', 'ownerId', 'catalogId', 'name', 'category',
+          'totalQuantity', 'reservedQuantity', 'installedQuantity',
+          'condition', 'source', 'unitMassGrams', 'notes',
+          'photoPreview', 'verificationStatus', 'lastUpdated',
+          'isSharedForCollaboration', 'testRecords', 'provenanceBatchId',
+          'reuseCycleCount'
+        ])
+        && data.keys().hasAll([
+          'id', 'ownerId', 'catalogId', 'name', 'category',
+          'totalQuantity', 'condition', 'source'
+        ])
+        && data.ownerId == uid
+        && data.ownerId == request.auth.uid
+        && data.id is string
+        && data.id.size() >= 1
+        && data.id.size() <= 100
+        && isValidId(data.id)
+        && data.catalogId is string
+        && data.catalogId.size() >= 1
+        && data.catalogId.size() <= 100
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 150
+        && data.category in ['microcontroller', 'sensor', 'actuator', 'passive', 'prototyping', 'display', 'power', 'other']
+        && data.totalQuantity is int
+        && data.totalQuantity >= 0
+        && data.totalQuantity <= 10000
+        && (!('reservedQuantity' in data) || (data.reservedQuantity is int && data.reservedQuantity >= 0))
+        && (!('installedQuantity' in data) || (data.installedQuantity is int && data.installedQuantity >= 0))
+        && ((!('reservedQuantity' in data) ? 0 : data.reservedQuantity) + (!('installedQuantity' in data) ? 0 : data.installedQuantity) <= data.totalQuantity)
+        && data.condition in ['working', 'partially-working', 'untested', 'faulty', 'unsafe']
+        && data.source in ['purchased', 'previous-project', 'salvaged', 'donated', 'gifted', 'recycled']
+        && (!('unitMassGrams' in data) || data.unitMassGrams == null || (data.unitMassGrams is number && data.unitMassGrams >= 0 && data.unitMassGrams <= 50000))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
+        && (!('photoPreview' in data) || data.photoPreview == null || (data.photoPreview is string && data.photoPreview.size() <= 2000))
+        && (!('verificationStatus' in data) || data.verificationStatus in ['untested', 'user-reported-working', 'recorded-test'])
+        && (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50))
+        && (!('isSharedForCollaboration' in data) || data.isSharedForCollaboration is bool)
+        && (!('testRecords' in data) || (data.testRecords is list && data.testRecords.size() <= 50))
+        && (!('provenanceBatchId' in data) || (data.provenanceBatchId is string && data.provenanceBatchId.size() <= 100))
+        && (!('reuseCycleCount' in data) || (data.reuseCycleCount is int && data.reuseCycleCount >= 0 && data.reuseCycleCount <= 1000));
+    }
+
+    // --- Saved Project Validation ---
+    function isValidSavedProject(data) {
+      return data.keys().hasOnly(['projectId', 'savedAt'])
+        && data.keys().hasAll(['projectId'])
+        && data.projectId is string
+        && data.projectId.size() >= 1
+        && data.projectId.size() <= 100
+        && isValidId(data.projectId)
+        && (!('savedAt' in data) || (data.savedAt is string && data.savedAt.size() <= 50));
+    }
+
+    // --- Guide Progress Validation (Smart Dustbin & Night Light) ---
+    function isValidGuideProgress(data, progressId) {
+      return data.keys().hasOnly([
+          'progressId', 'projectId', 'recipeVersion',
+          'currentStepIndex', 'completedStepIndices',
+          'playbackSpeed', 'isLearningCompleted', 'lastUpdated'
+        ])
+        && data.keys().hasAll(['projectId', 'recipeVersion'])
+        && (!('progressId' in data) || (data.progressId is string && data.progressId == progressId))
+        && (
+          (
+            data.projectId == 'proj-smart-dustbin'
+            && data.recipeVersion == 'v1'
+            && (!('currentStepIndex' in data) || (data.currentStepIndex is int && data.currentStepIndex >= 0 && data.currentStepIndex <= 5))
+            && (!('completedStepIndices' in data) || (
+                data.completedStepIndices is list
+                && data.completedStepIndices.size() <= 6
+                && [0, 1, 2, 3, 4, 5].hasAll(data.completedStepIndices)
+              ))
+          )
+          ||
+          (
+            data.projectId == 'proj-night-light'
+            && data.recipeVersion == 'v1'
+            && (!('currentStepIndex' in data) || (data.currentStepIndex is int && data.currentStepIndex >= 0 && data.currentStepIndex <= 3))
+            && (!('completedStepIndices' in data) || (
+                data.completedStepIndices is list
+                && data.completedStepIndices.size() <= 4
+                && [0, 1, 2, 3].hasAll(data.completedStepIndices)
+              ))
+          )
+        )
+        && (!('playbackSpeed' in data) || (data.playbackSpeed is number && data.playbackSpeed >= 0.5 && data.playbackSpeed <= 5.0))
+        && (!('isLearningCompleted' in data) || data.isLearningCompleted is bool)
+        && (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50));
+    }
+
+    // --- Workspace Guide Progress Validation (Shared Team Progress Model) ---
+    function isValidWorkspaceGuideProgress(data, progressId) {
+      return data.keys().hasOnly([
+          'progressId', 'projectId', 'recipeVersion',
+          'currentStepIndex', 'completedStepIndices',
+          'playbackSpeed', 'isLearningCompleted', 'lastUpdated', 'lastUpdatedBy'
+        ])
+        && data.keys().hasAll(['projectId', 'recipeVersion', 'currentStepIndex', 'lastUpdatedBy'])
+        && (!('progressId' in data) || (data.progressId is string && data.progressId == progressId))
+        && (
+          (
+            data.projectId == 'proj-smart-dustbin'
+            && data.recipeVersion == 'v1'
+            && data.currentStepIndex is int && data.currentStepIndex >= 0 && data.currentStepIndex <= 5
+            && (!('completedStepIndices' in data) || (
+                data.completedStepIndices is list
+                && data.completedStepIndices.size() <= 6
+                && [0, 1, 2, 3, 4, 5].hasAll(data.completedStepIndices)
+              ))
+          )
+          ||
+          (
+            data.projectId == 'proj-night-light'
+            && data.recipeVersion == 'v1'
+            && data.currentStepIndex is int && data.currentStepIndex >= 0 && data.currentStepIndex <= 3
+            && (!('completedStepIndices' in data) || (
+                data.completedStepIndices is list
+                && data.completedStepIndices.size() <= 4
+                && [0, 1, 2, 3].hasAll(data.completedStepIndices)
+              ))
+          )
+        )
+        && (!('playbackSpeed' in data) || (data.playbackSpeed is number && data.playbackSpeed >= 0.5 && data.playbackSpeed <= 5.0))
+        && (!('isLearningCompleted' in data) || data.isLearningCompleted is bool)
+        && (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50));
+    }
+
+    // --- Discoverable Profile Validation (Phase 4B1) ---
+    function isValidDiscoverableProfile(data, uid) {
+      return data.keys().hasOnly([
+          'uid', 'displayName', 'photoURL', 'bio', 'experience',
+          'interests', 'skills', 'collaborationPreference',
+          'isDiscoverable', 'isMentor', 'mentorTopics',
+          'mentorAvailabilityNotes', 'createdAt', 'updatedAt',
+          'ecoPoints', 'ecoRank', 'verifiedCompletedProjects', 'builderRank',
+          'highestDifficultyCompleted', 'badges', 'reusedComponentsCount', 'reuseCycleCount'
+        ])
+        && data.keys().hasAll(['uid', 'displayName', 'isDiscoverable'])
+        && data.uid == uid
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 100
+        && data.isDiscoverable is bool
+        && (!('email' in data)) // Never leak private email in discoverable directory
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 500))
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 500))
+        && (!('experience' in data) || data.experience in ['Beginner', 'Intermediate', 'Advanced'])
+        && (!('interests' in data) || (data.interests is list && data.interests.size() <= 30))
+        && (!('skills' in data) || (data.skills is list && data.skills.size() <= 30))
+        && (!('collaborationPreference' in data) || data.collaborationPreference in ['Open to team builds', 'Mentoring only', 'Project-specific', 'Solo maker'])
+        && (!('isMentor' in data) || data.isMentor is bool)
+        && (!('mentorTopics' in data) || (data.mentorTopics is list && data.mentorTopics.size() <= 10))
+        && (!('mentorAvailabilityNotes' in data) || (data.mentorAvailabilityNotes is string && data.mentorAvailabilityNotes.size() <= 300))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50))
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50))
+        && (!('ecoPoints' in data) || (data.ecoPoints is number && data.ecoPoints >= 0))
+        && (!('ecoRank' in data) || (data.ecoRank is string && data.ecoRank.size() <= 50))
+        && (!('verifiedCompletedProjects' in data) || (data.verifiedCompletedProjects is int && data.verifiedCompletedProjects >= 0))
+        && (!('builderRank' in data) || (data.builderRank is string && data.builderRank.size() <= 50))
+        && (!('highestDifficultyCompleted' in data) || data.highestDifficultyCompleted in ['Beginner', 'Intermediate', 'Advanced'])
+        && (!('badges' in data) || (data.badges is list && data.badges.size() <= 30))
+        && (!('reusedComponentsCount' in data) || (data.reusedComponentsCount is int && data.reusedComponentsCount >= 0))
+        && (!('reuseCycleCount' in data) || (data.reuseCycleCount is int && data.reuseCycleCount >= 0));
+    }
+
+    // --- Eco Point Transaction Validation ---
+    function isValidEcoPointTransaction(data, txId) {
+      return data.keys().hasOnly([
+          'id', 'userId', 'eventType', 'points', 'referenceType',
+          'referenceId', 'createdAt', 'reason', 'verificationSource'
+        ])
+        && data.keys().hasAll(['id', 'userId', 'eventType', 'points', 'createdAt'])
+        && data.id == txId
+        && data.userId == request.auth.uid
+        && data.eventType in ['physical-build', 'reuse-cycle', 'collaboration-completed', 'exchange-completed', 'mentorship-resolved', 'component-shared']
+        && (
+          (data.eventType == 'physical-build' && data.points == 50) ||
+          (data.eventType == 'reuse-cycle' && data.points == 30) ||
+          (data.eventType == 'collaboration-completed' && data.points == 35) ||
+          (data.eventType == 'exchange-completed' && data.points == 25) ||
+          (data.eventType == 'mentorship-resolved' && data.points == 20) ||
+          (data.eventType == 'component-shared' && data.points == 10)
+        )
+        && (!('referenceType' in data) || data.referenceType in ['project', 'cycle', 'exchange', 'mentorship', 'workspace', 'component'])
+        && (!('referenceId' in data) || (data.referenceId is string && data.referenceId.size() <= 100))
+        && (!('reason' in data) || (data.reason is string && data.reason.size() <= 200))
+        && (!('verificationSource' in data) || data.verificationSource in ['physical-ledger', 'mentor-verification', 'peer-exchange', 'system-deterministic']);
+    }
+
+    // --- Completed Project Record Validation ---
+    function isValidCompletedProject(data, recordId) {
+      return data.keys().hasOnly([
+          'id', 'userId', 'projectId', 'projectTitle', 'difficulty',
+          'completedAt', 'notes', 'photoUrl', 'buildResult', 'reusedComponentsCount',
+          'hardwareMassGrams', 'verificationLevel'
+        ])
+        && data.keys().hasAll(['id', 'userId', 'projectId', 'projectTitle', 'difficulty', 'completedAt', 'buildResult'])
+        && data.id == recordId
+        && data.userId == request.auth.uid
+        && data.difficulty in ['Beginner', 'Intermediate', 'Advanced']
+        && data.buildResult in ['working', 'partially-working', 'failed']
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
+        && (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500))
+        && (!('reusedComponentsCount' in data) || (data.reusedComponentsCount is int && data.reusedComponentsCount >= 0))
+        && (!('hardwareMassGrams' in data) || (data.hardwareMassGrams is number && data.hardwareMassGrams >= 0))
+        && (!('verificationLevel' in data) || data.verificationLevel in ['self-reported-working', 'bench-verified', 'peer-verified']);
+    }
+
+    // --- Mentorship Ticket Validation (Phase 4B1) ---
+    function isValidMentorshipTicket(data, ticketId) {
+      return data.keys().hasOnly([
+          'id', 'requesterId', 'requesterDisplayName', 'mentorId',
+          'mentorDisplayName', 'projectId', 'projectTitle', 'workspaceId',
+          'guideStepIndex', 'guideStepTitle', 'helpCategory', 'question',
+          'notesOrCode', 'status', 'responses', 'createdAt', 'updatedAt',
+          'resolvedAt'
+        ])
+        && data.keys().hasAll(['id', 'requesterId', 'mentorId', 'projectId', 'projectTitle', 'question', 'status'])
+        && data.id == ticketId
+        && data.requesterId is string && isValidId(data.requesterId)
+        && data.mentorId is string && isValidId(data.mentorId)
+        && data.status in ['open', 'accepted', 'declined', 'resolved', 'cancelled']
+        && data.question is string && data.question.size() >= 1 && data.question.size() <= 1000
+        && (!('responses' in data) || (data.responses is list && data.responses.size() <= 50));
+    }
+
+    // --- Shared Component Validation (Phase 4B2) ---
+    function isValidSharedComponent(data, shareId) {
+      return data.keys().hasOnly([
+          'id', 'ownerId', 'ownerDisplayName', 'inventoryItemId',
+          'catalogId', 'name', 'category', 'quantity', 'condition',
+          'verificationStatus', 'unitMassGrams', 'isShared',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll(['id', 'ownerId', 'inventoryItemId', 'catalogId', 'name', 'quantity', 'condition', 'isShared'])
+        && data.id == shareId
+        && data.ownerId == request.auth.uid
+        && data.condition == 'working' // Only confirmed working components can be shared for collaboration
+        && data.quantity is int && data.quantity >= 1 && data.quantity <= 10000
+        && data.isShared is bool;
+    }
+
+    // --- Collaboration Proposal Validation (Phase 4B2) ---
+    function isValidProposal(data, proposalId) {
+      return data.keys().hasOnly([
+          'id', 'projectId', 'projectTitle', 'senderId', 'senderDisplayName',
+          'receiverId', 'receiverDisplayName', 'senderContributions',
+          'receiverContributions', 'suggestedResponsibilities', 'message',
+          'status', 'workspaceId', 'rejectionReason', 'createdAt',
+          'respondedAt'
+        ])
+        && data.keys().hasAll(['id', 'projectId', 'projectTitle', 'senderId', 'receiverId', 'status', 'senderContributions', 'receiverContributions'])
+        && data.id == proposalId
+        && data.senderId is string && isValidId(data.senderId)
+        && data.receiverId is string && isValidId(data.receiverId)
+        && data.senderContributions is list
+        && data.receiverContributions is list
+        && data.status in ['pending', 'accepted', 'declined', 'cancelled'];
+    }
+
+    // --- Workspace Validation (Phase 4B2) ---
+    function isValidWorkspace(data, workspaceId) {
+      return data.keys().hasOnly([
+          'id', 'projectId', 'projectTitle', 'creatorId', 'memberIds',
+          'memberRoles', 'status', 'reservations', 'tasks', 'messages',
+          'acceptedProposalId', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll(['id', 'projectId', 'creatorId', 'memberIds', 'status', 'reservations'])
+        && data.id == workspaceId
+        && data.memberIds is list
+        && data.memberIds.size() >= 1
+        && data.memberIds.size() <= 20
+        && data.status in ['active', 'completed', 'cancelled']
+        && data.reservations is list
+        && (!('tasks' in data) || (data.tasks is list && data.tasks.size() <= 100))
+        && (!('messages' in data) || (data.messages is list && data.messages.size() <= 200));
+    }
+
+    // --- Hardware Reuse Ledger Validation (Phase 6) ---
+    function isValidReuseLedgerEntry(data, entryId) {
+      return data.keys().hasOnly([
+          'id', 'timestamp', 'eventType', 'itemId', 'catalogId', 'name',
+          'quantity', 'unitMassGrams', 'totalMassGrams', 'cycleCount',
+          'notes', 'workspaceId', 'projectId', 'projectTitle', 'makerId',
+          'makerDisplayName', 'allocatedItems', 'verificationLevel'
+        ])
+        && data.keys().hasAll(['id', 'timestamp', 'eventType'])
+        && data.id == entryId
+        && data.eventType in [
+          'allocated_to_build', 'physical_build_complete', 'disassembled_to_stock',
+          'retested_pass', 'retested_fail', 'physical-build-completed', 'disassembly-returned',
+          'correction_reversal'
+        ]
+        && (!('quantity' in data) || (data.quantity is int && data.quantity > 0 && data.quantity <= 10000))
+        && (!('totalMassGrams' in data) || data.totalMassGrams == null || (data.totalMassGrams is number && data.totalMassGrams >= 0))
+        && (!('allocatedItems' in data) || (data.allocatedItems is list && data.allocatedItems.size() <= 100));
+    }
+
+    // --- Review Validation (Phase 7) ---
+    function isValidReview(data, reviewId) {
+      return data.keys().hasOnly([
+          'id', 'interactionId', 'interactionType', 'reviewerId',
+          'reviewerDisplayName', 'revieweeId', 'targetMakerId',
+          'targetMakerDisplayName', 'rating', 'feedback', 'createdAt'
+        ])
+        && data.keys().hasAll(['id', 'interactionId', 'interactionType', 'reviewerId', 'rating', 'feedback', 'createdAt'])
+        && data.id == reviewId
+        && reviewId == data.interactionId + '_' + data.reviewerId
+        && data.reviewerId == request.auth.uid
+        && data.interactionType in ['workspace', 'exchange', 'component_exchange']
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.feedback is string && data.feedback.size() >= 1 && data.feedback.size() <= 1000;
+    }
+
+    // --- Moderation Report Validation (Phase 7) ---
+    function isValidModerationReport(data, reportId) {
+      return data.keys().hasOnly([
+          'id', 'reporterId', 'targetType', 'targetId', 'targetDisplayName',
+          'reason', 'description', 'details', 'status', 'createdAt'
+        ])
+        && data.keys().hasAll(['id', 'reporterId', 'targetType', 'targetId', 'reason', 'status', 'createdAt'])
+        && data.id == reportId
+        && data.reporterId == request.auth.uid
+        && data.status in ['submitted', 'pending']
+        && data.targetType in ['profile', 'message', 'ticket', 'listing', 'maker', 'proposal', 'workspace_message'];
+    }
+
+    // --- Exchange Listing Validation (Phase 7) ---
+    function isValidExchangeListing(data, listingId) {
+      return data.keys().hasOnly([
+          'id', 'ownerId', 'ownerDisplayName', 'inventoryItemId',
+          'catalogId', 'name', 'componentName', 'category', 'quantity',
+          'offeredQuantity', 'listingType', 'condition', 'notes',
+          'handoffMethod', 'handoffLocationNote', 'approximateLocation',
+          'status', 'requesterId', 'requesterDisplayName', 'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasAll(['id', 'ownerId', 'catalogId', 'quantity', 'condition', 'listingType', 'status', 'createdAt'])
+        && data.id == listingId
+        && data.ownerId is string && isValidId(data.ownerId)
+        && data.quantity is int && data.quantity >= 1 && data.quantity <= 10000
+        && data.status in ['available', 'requested', 'handover_pending', 'completed', 'cancelled', 'claimed']
+        && (!('requesterId' in data) || (data.requesterId is string && isValidId(data.requesterId)));
+    }
+
+    // ==========================================
+    // COLLECTION ACCESS RULES
+    // ==========================================
+
+    // Users Collection Root & Private Data
+    match /users/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false; // Users cannot list other users in private Account Mode
+      allow create, update: if isOwner(uid) && isValidUserProfile(incoming());
+      allow delete: if isOwner(uid);
+
+      // Private Inventory Subcollection
+      match /inventory/{itemId} {
+        allow get, list: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && itemId == incoming().id
+          && isValidId(itemId)
+          && isValidInventoryItem(incoming(), uid);
+        allow update: if isOwner(uid)
+          && itemId == incoming().id
+          && isValidId(itemId)
+          && isValidInventoryItem(incoming(), uid)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id;
+        allow delete: if isOwner(uid) && isValidId(itemId);
       }
 
-      function isOwner(userId) {
-        return isAuthenticated() && request.auth.uid == userId;
+      // Private Saved Projects Subcollection
+      match /savedProjects/{projectId} {
+        allow get, list: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && projectId == incoming().projectId
+          && isValidId(projectId)
+          && isValidSavedProject(incoming());
+        allow update: if isOwner(uid)
+          && projectId == incoming().projectId
+          && isValidId(projectId)
+          && isValidSavedProject(incoming())
+          && incoming().projectId == existing().projectId;
+        allow delete: if isOwner(uid) && isValidId(projectId);
       }
 
-      function isValidId(id) {
-        return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-      }
-
-      function incoming() {
-        return request.resource.data;
-      }
-
-      function existing() {
-        return resource.data;
-      }
-
-      // --- User Profile Validation ---
-      // Explicit field allowlist (hasOnly) and required fields (hasAll)
-      function isValidUserProfile(data) {
-        return data.keys().hasOnly([
-            'displayName', 'experience', 'interests', 'skills',
-            'preferredDifficulty', 'availableTime', 'collaborationPreference',
-            'email', 'photoURL', 'bio', 'createdAt', 'updatedAt'
-          ])
-          && data.keys().hasAll(['displayName', 'experience'])
-          && data.displayName is string
-          && data.displayName.size() >= 1
-          && data.displayName.size() <= 100
-          && data.experience in ['Beginner', 'Intermediate', 'Advanced']
-          && (!('email' in data) || (data.email is string && data.email.size() <= 200))
-          && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
-          && (!('interests' in data) || (data.interests is list && data.interests.size() <= 30))
-          && (!('skills' in data) || (data.skills is list && data.skills.size() <= 30))
-          && (!('preferredDifficulty' in data) || data.preferredDifficulty in ['Beginner', 'Intermediate', 'Advanced'])
-          && (!('availableTime' in data) || (data.availableTime is string && data.availableTime.size() <= 100))
-          && (!('collaborationPreference' in data) || data.collaborationPreference in ['Open to team builds', 'Mentoring only', 'Project-specific', 'Solo maker'])
-          && (!('bio' in data) || (data.bio is string && data.bio.size() <= 500))
-          && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50))
-          && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
-      }
-
-      // --- Inventory Item Validation ---
-      // Explicit field allowlist (hasOnly) and required fields (hasAll)
-      // Strictly requires integer quantities: totalQuantity is int, reservedQuantity is int, installedQuantity is int
-      // Supports 'unsafe' condition per domain model (hazardous / quarantine)
-      function isValidInventoryItem(data, uid) {
-        return data.keys().hasOnly([
-            'id', 'ownerId', 'catalogId', 'name', 'category',
-            'totalQuantity', 'reservedQuantity', 'installedQuantity',
-            'condition', 'source', 'unitMassGrams', 'notes',
-            'photoPreview', 'verificationStatus', 'lastUpdated',
-            'isSharedForCollaboration'
-          ])
-          && data.keys().hasAll([
-            'id', 'ownerId', 'catalogId', 'name', 'category',
-            'totalQuantity', 'condition', 'source'
-          ])
-          && data.ownerId == uid
-          && data.ownerId == request.auth.uid
-          && data.id is string
-          && data.id.size() >= 1
-          && data.id.size() <= 100
-          && isValidId(data.id)
-          && data.catalogId is string
-          && data.catalogId.size() >= 1
-          && data.catalogId.size() <= 100
-          && data.name is string
-          && data.name.size() >= 1
-          && data.name.size() <= 150
-          && data.category in ['microcontroller', 'sensor', 'actuator', 'passive', 'prototyping', 'display', 'power', 'other']
-          && data.totalQuantity is int
-          && data.totalQuantity >= 0
-          && data.totalQuantity <= 10000
-          // In Phase 4A, client cannot create real collaboration reservations (reservedQuantity must be 0)
-          && (!('reservedQuantity' in data) || (data.reservedQuantity is int && data.reservedQuantity == 0))
-          && (!('installedQuantity' in data) || (data.installedQuantity is int && data.installedQuantity >= 0 && data.installedQuantity <= data.totalQuantity))
-          && data.condition in ['working', 'partially-working', 'untested', 'faulty', 'unsafe']
-          && data.source in ['purchased', 'previous-project', 'salvaged', 'donated', 'gifted', 'recycled']
-          && (!('unitMassGrams' in data) || data.unitMassGrams == null || (data.unitMassGrams is number && data.unitMassGrams >= 0 && data.unitMassGrams <= 50000))
-          && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
-          && (!('photoPreview' in data) || data.photoPreview == null || (data.photoPreview is string && data.photoPreview.size() <= 2000))
-          && (!('verificationStatus' in data) || data.verificationStatus in ['untested', 'user-reported-working', 'recorded-test'])
-          && (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50))
-          && (!('isSharedForCollaboration' in data) || data.isSharedForCollaboration is bool);
-      }
-
-      // --- Saved Project Validation ---
-      // Explicit field allowlist (hasOnly) and required fields (hasAll)
-      function isValidSavedProject(data) {
-        return data.keys().hasOnly(['projectId', 'savedAt'])
-          && data.keys().hasAll(['projectId'])
-          && data.projectId is string
-          && data.projectId.size() >= 1
-          && data.projectId.size() <= 100
-          && isValidId(data.projectId)
-          && (!('savedAt' in data) || (data.savedAt is string && data.savedAt.size() <= 50));
-      }
-
-      // --- Guide Progress Validation ---
-      // Explicit field allowlist (hasOnly) and required fields (hasAll)
-      // Strictly requires integer currentStepIndex (is int)
-      // Restricted to the currently supported recipe pair: projectId == 'proj-smart-dustbin', recipeVersion == 'v1'
-      function isValidGuideProgress(data, progressId) {
-        return data.keys().hasOnly([
-            'progressId', 'projectId', 'recipeVersion',
-            'currentStepIndex', 'completedStepIndices',
-            'playbackSpeed', 'isLearningCompleted', 'lastUpdated'
-          ])
-          && data.keys().hasAll(['projectId', 'recipeVersion'])
-          && (!('progressId' in data) || (data.progressId is string && data.progressId == progressId))
-          && data.projectId == 'proj-smart-dustbin'
-          && data.recipeVersion == 'v1'
-          // Permitted step index for supported recipe (0 to 5) must be integer
-          && (!('currentStepIndex' in data) || (data.currentStepIndex is int && data.currentStepIndex >= 0 && data.currentStepIndex <= 5))
-          // Completed step values must only be valid indices from supported recipe [0, 1, 2, 3, 4, 5]
-          && (!('completedStepIndices' in data) || (
-              data.completedStepIndices is list
-              && data.completedStepIndices.size() <= 6
-              && [0, 1, 2, 3, 4, 5].hasAll(data.completedStepIndices)
-            ))
-          && (!('playbackSpeed' in data) || (data.playbackSpeed is number && data.playbackSpeed >= 0.5 && data.playbackSpeed <= 5.0))
-          && (!('isLearningCompleted' in data) || data.isLearningCompleted is bool)
-          && (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50));
-      }
-
-      // ==========================================
-      // COLLECTION ACCESS RULES
-      // ==========================================
-
-      // Users Collection Root & Profile
-      match /users/{uid} {
-        allow get: if isOwner(uid);
-        allow list: if false; // Users cannot list other users in private Account Mode
-        allow create: if isOwner(uid) && isValidUserProfile(incoming());
-        allow update: if isOwner(uid) && isValidUserProfile(incoming());
+      // Private Standalone 3D Guide Progress Subcollection
+      match /guideProgress/{progressId} {
+        allow get, list: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && progressId == incoming().projectId + '_' + incoming().recipeVersion
+          && isValidGuideProgress(incoming(), progressId);
+        allow update: if isOwner(uid)
+          && progressId == incoming().projectId + '_' + incoming().recipeVersion
+          && incoming().projectId == existing().projectId
+          && incoming().recipeVersion == existing().recipeVersion
+          && isValidGuideProgress(incoming(), progressId);
         allow delete: if isOwner(uid);
-
-        // Private Inventory Subcollection
-        match /inventory/{itemId} {
-          allow get: if isOwner(uid);
-          allow list: if isOwner(uid);
-          allow create: if isOwner(uid)
-            && itemId == incoming().id
-            && isValidId(itemId)
-            && isValidInventoryItem(incoming(), uid);
-          allow update: if isOwner(uid)
-            && itemId == incoming().id
-            && isValidId(itemId)
-            && isValidInventoryItem(incoming(), uid)
-            && incoming().ownerId == existing().ownerId
-            && incoming().id == existing().id;
-          allow delete: if isOwner(uid) && isValidId(itemId);
-        }
-
-        // Private Saved Projects Subcollection
-        match /savedProjects/{projectId} {
-          allow get: if isOwner(uid);
-          allow list: if isOwner(uid);
-          allow create: if isOwner(uid)
-            && projectId == incoming().projectId
-            && isValidId(projectId)
-            && isValidSavedProject(incoming());
-          allow update: if isOwner(uid)
-            && projectId == incoming().projectId
-            && isValidId(projectId)
-            && isValidSavedProject(incoming())
-            && incoming().projectId == existing().projectId;
-          allow delete: if isOwner(uid) && isValidId(projectId);
-        }
-
-        // Private Standalone 3D Guide Progress Subcollection
-        // Document ID must strictly correspond to {projectId}_{recipeVersion}
-        // which evaluates to 'proj-smart-dustbin_v1'
-        match /guideProgress/{progressId} {
-          allow get: if isOwner(uid);
-          allow list: if isOwner(uid);
-          allow create: if isOwner(uid)
-            && progressId == incoming().projectId + '_' + incoming().recipeVersion
-            && isValidGuideProgress(incoming(), progressId);
-          allow update: if isOwner(uid)
-            && progressId == incoming().projectId + '_' + incoming().recipeVersion
-            && incoming().projectId == existing().projectId
-            && incoming().recipeVersion == existing().recipeVersion
-            && isValidGuideProgress(incoming(), progressId);
-          allow delete: if isOwner(uid);
-        }
       }
 
-      // Default Deny for all other collections
-      match /{document=**} {
-        allow read, write: if false;
+      // Private Hardware Reuse Ledger Subcollection (Phase 6)
+      // Strictly immutable append-only audit trail
+      match /reuseLedger/{entryId} {
+        allow get, list: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidReuseLedgerEntry(incoming(), entryId);
+        allow update: if false; // Mutating past audit records is strictly forbidden
+        allow delete: if false; // Deleting audit records is strictly forbidden
       }
     }
+
+    // Discoverable Maker Profiles (Phase 4B1)
+    // Direct document reads of unpublished profiles by other users are denied
+    match /discoverable_profiles/{uid} {
+      allow get: if isAuthenticated() && (resource.data.isDiscoverable == true || isOwner(uid));
+      allow list: if isAuthenticated() && resource.data.isDiscoverable == true;
+      allow create, update: if isOwner(uid) && isValidDiscoverableProfile(incoming(), uid);
+      allow delete: if isOwner(uid);
+    }
+
+    // Mentorship Tickets (Phase 4B1)
+    // Visible and editable only by requester and assigned mentor
+    match /mentorship_tickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.requesterId ||
+        request.auth.uid == resource.data.mentorId
+      );
+      allow create: if isAuthenticated()
+        && request.auth.uid == incoming().requesterId
+        && incoming().requesterId != incoming().mentorId
+        && incoming().status == 'open'
+        && isValidMentorshipTicket(incoming(), ticketId)
+        // Verify target mentor is an opted-in discoverable mentor
+        && exists(/databases/$(database)/documents/discoverable_profiles/$(incoming().mentorId))
+        && get(/databases/$(database)/documents/discoverable_profiles/$(incoming().mentorId)).data.isDiscoverable == true
+        && get(/databases/$(database)/documents/discoverable_profiles/$(incoming().mentorId)).data.isMentor == true;
+      allow update: if isAuthenticated()
+        && (request.auth.uid == existing().requesterId || request.auth.uid == existing().mentorId)
+        && incoming().id == existing().id
+        && incoming().requesterId == existing().requesterId
+        && incoming().mentorId == existing().mentorId
+        && incoming().projectId == existing().projectId
+        && incoming().projectTitle == existing().projectTitle
+        && (!('helpCategory' in existing()) || incoming().helpCategory == existing().helpCategory)
+        && incoming().question == existing().question
+        && isValidMentorshipTicket(incoming(), ticketId)
+        && (
+          // Role-specific allowed transitions:
+          (existing().status == 'open' && incoming().status in ['accepted', 'declined'] && request.auth.uid == existing().mentorId)
+          ||
+          (existing().status == 'open' && incoming().status == 'cancelled' && request.auth.uid == existing().requesterId)
+          ||
+          (existing().status == 'accepted' && incoming().status == 'resolved' && (request.auth.uid == existing().mentorId || request.auth.uid == existing().requesterId))
+          ||
+          (incoming().status == existing().status && existing().status in ['open', 'accepted'])
+        );
+      allow delete: if false; // Tickets are archived / resolved, not deleted
+
+      // Separately Validated Append-Only Responses Subcollection (Enforces Authorship)
+      match /responses/{responseId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == get(/databases/$(database)/documents/mentorship_tickets/$(ticketId)).data.requesterId ||
+          request.auth.uid == get(/databases/$(database)/documents/mentorship_tickets/$(ticketId)).data.mentorId
+        );
+        allow create: if isAuthenticated()
+          && (
+            request.auth.uid == get(/databases/$(database)/documents/mentorship_tickets/$(ticketId)).data.requesterId ||
+            request.auth.uid == get(/databases/$(database)/documents/mentorship_tickets/$(ticketId)).data.mentorId
+          )
+          && incoming().authorId == request.auth.uid
+          && incoming().ticketId == ticketId
+          && incoming().id == responseId
+          && incoming().content is string
+          && incoming().content.size() >= 1
+          && incoming().content.size() <= 2000
+          && incoming().keys().hasOnly(['id', 'ticketId', 'authorId', 'authorDisplayName', 'content', 'createdAt'])
+          && incoming().keys().hasAll(['id', 'ticketId', 'authorId', 'content', 'createdAt']);
+        allow update: if false; // Append-only; responses cannot be edited
+        allow delete: if false; // Preserves conversation history
+      }
+    }
+
+    // Shared Components (Phase 4B2)
+    // Separate create/update permissions; ownerId and inventoryItemId are immutable
+    match /shared_components/{shareId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.auth.uid == incoming().ownerId
+        && isValidSharedComponent(incoming(), shareId)
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/inventory/$(incoming().inventoryItemId));
+      allow update: if isAuthenticated()
+        && request.auth.uid == existing().ownerId
+        && incoming().ownerId == existing().ownerId
+        && incoming().id == existing().id
+        && incoming().inventoryItemId == existing().inventoryItemId
+        && isValidSharedComponent(incoming(), shareId)
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/inventory/$(incoming().inventoryItemId));
+      allow delete: if isAuthenticated() && request.auth.uid == existing().ownerId;
+    }
+
+    // Collaboration Proposals (Phase 4B2)
+    // Enforce explicit transitions from existing status; contributions immutable even if client deletes them
+    match /collaboration_proposals/{proposalId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.senderId ||
+        request.auth.uid == resource.data.receiverId
+      );
+      allow create: if isAuthenticated()
+        && request.auth.uid == incoming().senderId
+        && incoming().senderId != incoming().receiverId
+        && incoming().status == 'pending'
+        && isValidProposal(incoming(), proposalId);
+      allow update: if isAuthenticated()
+        && existing().status == 'pending'
+        && isValidProposal(incoming(), proposalId)
+        && incoming().id == existing().id
+        && incoming().projectId == existing().projectId
+        && incoming().projectTitle == existing().projectTitle
+        && incoming().senderId == existing().senderId
+        && incoming().receiverId == existing().receiverId
+        && ('senderContributions' in incoming())
+        && ('receiverContributions' in incoming())
+        && incoming().senderContributions == existing().senderContributions
+        && incoming().receiverContributions == existing().receiverContributions
+        && (
+          // Sender cancellation:
+          (
+            request.auth.uid == existing().senderId
+            && incoming().status == 'cancelled'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'respondedAt'])
+          )
+          ||
+          // Receiver response - Accept:
+          (
+            request.auth.uid == existing().receiverId
+            && incoming().status == 'accepted'
+            && ('workspaceId' in incoming())
+            && incoming().workspaceId is string
+            && isValidId(incoming().workspaceId)
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'workspaceId', 'respondedAt'])
+          )
+          ||
+          // Receiver response - Decline:
+          (
+            request.auth.uid == existing().receiverId
+            && incoming().status == 'declined'
+            && (!('rejectionReason' in incoming()) || (incoming().rejectionReason is string && incoming().rejectionReason.size() <= 500))
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'rejectionReason', 'respondedAt'])
+          )
+        );
+      allow delete: if false; // Terminal proposals are not deleted
+    }
+
+    // Project Workspaces (Phase 4B2)
+    // Strictly member-only access; consent-based membership; reservations preserved unless authorized
+    match /project_workspaces/{workspaceId} {
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.memberIds);
+      allow create: if isAuthenticated()
+        && (request.auth.uid in incoming().memberIds)
+        && request.auth.uid == incoming().creatorId
+        && isValidWorkspace(incoming(), workspaceId);
+      allow update: if isAuthenticated()
+        && (request.auth.uid in existing().memberIds)
+        && isValidWorkspace(incoming(), workspaceId)
+        && incoming().id == existing().id
+        && incoming().creatorId == existing().creatorId
+        && incoming().projectId == existing().projectId
+        && incoming().projectTitle == existing().projectTitle
+        && ('reservations' in incoming())
+        && (
+          // Operation 1: Task / Role updates by any member (Preserves status, members, and reservations)
+          (
+            incoming().status == existing().status
+            && incoming().memberIds == existing().memberIds
+            && incoming().reservations == existing().reservations
+            && incoming().diff(existing()).affectedKeys().hasOnly(['tasks', 'memberRoles', 'updatedAt'])
+          )
+          ||
+          // Operation 2: Valid Member Self-Removal (Preserves status and reservations; creator cannot self-remove)
+          (
+            incoming().status == existing().status
+            && incoming().reservations == existing().reservations
+            && request.auth.uid in existing().memberIds
+            && !(request.auth.uid in incoming().memberIds)
+            && existing().memberIds.hasAll(incoming().memberIds)
+            && incoming().memberIds.concat([request.auth.uid]).hasAll(existing().memberIds)
+            && incoming().memberIds.size() == existing().memberIds.size() - 1
+            && incoming().memberIds.size() >= 1
+            && request.auth.uid != existing().creatorId
+            && incoming().diff(existing()).affectedKeys().hasOnly(['memberIds', 'memberRoles', 'updatedAt'])
+          )
+          ||
+          // Operation 3: Authorized reservation modification by Creator
+          (
+            request.auth.uid == existing().creatorId
+            && incoming().status == existing().status
+            && incoming().memberIds == existing().memberIds
+            && incoming().diff(existing()).affectedKeys().hasOnly(['reservations', 'updatedAt'])
+          )
+          ||
+          // Operation 4: Authorized lifecycle completion or cancellation by Creator
+          (
+            request.auth.uid == existing().creatorId
+            && existing().status == 'active'
+            && incoming().status in ['completed', 'cancelled']
+            && incoming().memberIds == existing().memberIds
+            && incoming().reservations == existing().reservations
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+          ||
+          // Operation 5: Adding a member with verified invitation proposal acceptance
+          (
+            request.auth.uid == existing().creatorId
+            && incoming().status == existing().status
+            && incoming().reservations == existing().reservations
+            && incoming().memberIds.size() == existing().memberIds.size() + 1
+            && incoming().memberIds.hasAll(existing().memberIds)
+            && incoming().memberIds.size() <= 20
+            && ('acceptedProposalId' in incoming())
+            && exists(/databases/$(database)/documents/collaboration_proposals/$(incoming().acceptedProposalId))
+            && get(/databases/$(database)/documents/collaboration_proposals/$(incoming().acceptedProposalId)).data.status == 'accepted'
+            && get(/databases/$(database)/documents/collaboration_proposals/$(incoming().acceptedProposalId)).data.workspaceId == workspaceId
+            && (
+              get(/databases/$(database)/documents/collaboration_proposals/$(incoming().acceptedProposalId)).data.receiverId in incoming().memberIds
+              || get(/databases/$(database)/documents/collaboration_proposals/$(incoming().acceptedProposalId)).data.senderId in incoming().memberIds
+            )
+            && incoming().diff(existing()).affectedKeys().hasOnly(['memberIds', 'memberRoles', 'acceptedProposalId', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+
+      // Shared Workspace Guide Progress Subcollection (Enforces Recipe Scope & Step Invariants)
+      match /guideProgress/{progressId} {
+        allow read: if isAuthenticated()
+          && (request.auth.uid in get(/databases/$(database)/documents/project_workspaces/$(workspaceId)).data.memberIds);
+        allow create, update: if isAuthenticated()
+          && (request.auth.uid in get(/databases/$(database)/documents/project_workspaces/$(workspaceId)).data.memberIds)
+          && progressId == incoming().projectId + '_' + incoming().recipeVersion
+          && incoming().projectId == get(/databases/$(database)/documents/project_workspaces/$(workspaceId)).data.projectId
+          && isValidWorkspaceGuideProgress(incoming(), progressId)
+          && incoming().lastUpdatedBy == request.auth.uid;
+        allow delete: if false; // Shared team progress is preserved
+      }
+
+      // Separately Validated Append-Only Messages Subcollection (Enforces Authorship & Anti-Impersonation)
+      match /messages/{messageId} {
+        allow read: if isAuthenticated()
+          && (request.auth.uid in get(/databases/$(database)/documents/project_workspaces/$(workspaceId)).data.memberIds);
+        allow create: if isAuthenticated()
+          && (request.auth.uid in get(/databases/$(database)/documents/project_workspaces/$(workspaceId)).data.memberIds)
+          && incoming().authorId == request.auth.uid
+          && incoming().workspaceId == workspaceId
+          && incoming().id == messageId
+          && incoming().content is string
+          && incoming().content.size() >= 1
+          && incoming().content.size() <= 2000
+          && incoming().keys().hasOnly(['id', 'workspaceId', 'authorId', 'authorDisplayName', 'content', 'createdAt'])
+          && incoming().keys().hasAll(['id', 'workspaceId', 'authorId', 'content', 'createdAt']);
+        allow update: if false; // Append-only; editing another or own message is strictly forbidden
+        allow delete: if false; // Previous entries are permanently preserved
+      }
+    }
+
+    // Component Exchange & Surplus Listings (Phase 7)
+    // Immutable ownership and catalog fields; explicit owner confirmation on completion
+    match /component_exchange_listings/{listingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.auth.uid == incoming().ownerId
+        && incoming().status == 'available'
+        && isValidExchangeListing(incoming(), listingId);
+      allow update: if isAuthenticated()
+        && isValidExchangeListing(incoming(), listingId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().catalogId == existing().catalogId
+        && incoming().quantity == existing().quantity
+        && incoming().condition == existing().condition
+        && (
+          // Owner updating listing details or confirming handover completion
+          (request.auth.uid == existing().ownerId)
+          ||
+          // Requester claiming an available listing
+          (
+            existing().status == 'available'
+            && incoming().status in ['requested', 'claimed']
+            && request.auth.uid != existing().ownerId
+            && incoming().requesterId == request.auth.uid
+            && incoming().catalogId == existing().catalogId
+            && incoming().quantity == existing().quantity
+          )
+          ||
+          // Requester releasing their claim
+          (
+            existing().status in ['requested', 'claimed']
+            && incoming().status == 'available'
+            && request.auth.uid == existing().requesterId
+            && incoming().catalogId == existing().catalogId
+            && incoming().quantity == existing().quantity
+          )
+        );
+      allow delete: if isAuthenticated() && request.auth.uid == existing().ownerId && existing().status != 'completed';
+    }
+
+    // Community Project Showcase (Phase 7)
+    match /showcase_projects/{showcaseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == incoming().authorId;
+      allow update, delete: if isAuthenticated() && request.auth.uid == existing().authorId;
+    }
+
+    // Verified Interaction Reviews (Phase 7)
+    // Deterministic ID (interactionId_reviewerId) ensures exactly 1 review per eligible completed interaction
+    match /interaction_reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && isValidReview(incoming(), reviewId)
+        && (
+          (
+            incoming().interactionType == 'workspace'
+            && exists(/databases/$(database)/documents/project_workspaces/$(incoming().interactionId))
+            && get(/databases/$(database)/documents/project_workspaces/$(incoming().interactionId)).data.status == 'completed'
+            && (request.auth.uid in get(/databases/$(database)/documents/project_workspaces/$(incoming().interactionId)).data.memberIds)
+            && (incoming().targetMakerId in get(/databases/$(database)/documents/project_workspaces/$(incoming().interactionId)).data.memberIds)
+            && incoming().targetMakerId != request.auth.uid
+          )
+          ||
+          (
+            incoming().interactionType in ['exchange', 'component_exchange']
+            && exists(/databases/$(database)/documents/component_exchange_listings/$(incoming().interactionId))
+            && get(/databases/$(database)/documents/component_exchange_listings/$(incoming().interactionId)).data.status == 'completed'
+            && (
+              (request.auth.uid == get(/databases/$(database)/documents/component_exchange_listings/$(incoming().interactionId)).data.ownerId && incoming().targetMakerId == get(/databases/$(database)/documents/component_exchange_listings/$(incoming().interactionId)).data.requesterId)
+              ||
+              (request.auth.uid == get(/databases/$(database)/documents/component_exchange_listings/$(incoming().interactionId)).data.requesterId && incoming().targetMakerId == get(/databases/$(database)/documents/component_exchange_listings/$(incoming().interactionId)).data.ownerId)
+            )
+          )
+        );
+      allow update: if false; // Reviews cannot be altered once posted
+      allow delete: if isAuthenticated() && request.auth.uid == existing().reviewerId;
+    }
+
+    // Moderation Reports (Phase 7)
+    // Only the reporter can read their filed report; cannot list or tamper
+    match /moderation_reports/{reportId} {
+      allow get: if isAuthenticated() && request.auth.uid == resource.data.reporterId;
+      allow list: if false; // Moderation queue is processed by lab administrative workflow
+      allow create: if isAuthenticated() && isValidModerationReport(incoming(), reportId);
+      allow update, delete: if false;
+    }
+
+    // Institutional Pilot Organizations (Phase 7)
+    match /organizations/{orgId} {
+      allow get: if isAuthenticated() && (
+        ('memberUids' in resource.data && request.auth.uid in resource.data.memberUids) ||
+        ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) ||
+        ('adminUids' in resource.data && request.auth.uid in resource.data.adminUids) ||
+        ('adminIds' in resource.data && request.auth.uid in resource.data.adminIds)
+      );
+      allow list: if isAuthenticated() && (
+        ('memberUids' in resource.data && request.auth.uid in resource.data.memberUids) ||
+        ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) ||
+        ('adminUids' in resource.data && request.auth.uid in resource.data.adminUids) ||
+        ('adminIds' in resource.data && request.auth.uid in resource.data.adminIds)
+      );
+      allow create: if isAuthenticated() && (
+        ('adminUids' in incoming() && request.auth.uid in incoming().adminUids) ||
+        ('adminIds' in incoming() && request.auth.uid in incoming().adminIds)
+      ) && incoming().id == orgId;
+      allow update: if isAuthenticated()
+        && (
+          ('adminUids' in existing() && request.auth.uid in existing().adminUids) ||
+          ('adminIds' in existing() && request.auth.uid in existing().adminIds)
+        )
+        && incoming().id == existing().id;
+      allow delete: if false;
+
+      match /inventory/{itemId} {
+        allow read: if isAuthenticated()
+          && (
+            ('memberUids' in get(/databases/$(database)/documents/organizations/$(orgId)).data && request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.memberUids) ||
+            ('memberIds' in get(/databases/$(database)/documents/organizations/$(orgId)).data && request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.memberIds) ||
+            ('adminUids' in get(/databases/$(database)/documents/organizations/$(orgId)).data && request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.adminUids) ||
+            ('adminIds' in get(/databases/$(database)/documents/organizations/$(orgId)).data && request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.adminIds)
+          );
+        allow write: if isAuthenticated()
+          && (
+            ('adminUids' in get(/databases/$(database)/documents/organizations/$(orgId)).data && request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.adminUids) ||
+            ('adminIds' in get(/databases/$(database)/documents/organizations/$(orgId)).data && request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.adminIds)
+          );
+      }
+    }
+
+    // Eco Point Transactions (Phase 2)
+    // Strictly append-only, verified transaction log
+    match /eco_point_transactions/{txId} {
+      allow get, list: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if isAuthenticated()
+        && request.auth.uid == incoming().userId
+        && isValidEcoPointTransaction(incoming(), txId);
+      allow update, delete: if false; // Transactions are strictly immutable
+    }
+
+    // Completed Projects Record (Phase 3 & 10)
+    // Public reading for community showcase / portfolios; strictly append-only
+    match /completed_projects/{recordId} {
+      allow get, list: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.auth.uid == incoming().userId
+        && isValidCompletedProject(incoming(), recordId);
+      allow update, delete: if false; // Build records are strictly immutable
+    }
+
+    // Default Deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
+}

@@ -188,6 +188,82 @@ export function ComponentPassportModal({
           </p>
         </div>
 
+        {/* Phase 6: Physical Test Records & Bench Verification */}
+        <div className="space-y-3 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#087F83]" />
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Physical Bench Test Evidence ({item.testRecords?.length || 0} Records)
+              </h4>
+            </div>
+            {item.reuseCycleCount !== undefined && item.reuseCycleCount > 0 && (
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                Reuse Lifecycle: Cycle #{item.reuseCycleCount}
+              </span>
+            )}
+          </div>
+
+          {item.testRecords && item.testRecords.length > 0 ? (
+            <div className="space-y-2">
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="p-2">Date</th>
+                      <th className="p-2">Test Type</th>
+                      <th className="p-2">Method</th>
+                      <th className="p-2">Result</th>
+                      <th className="p-2">Quantity</th>
+                      <th className="p-2">Tester</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {item.testRecords.map((tr) => (
+                      <tr key={tr.id} className="hover:bg-slate-50/70">
+                        <td className="p-2 whitespace-nowrap text-slate-500">{tr.date}</td>
+                        <td className="p-2 font-mono text-slate-700 capitalize">{tr.testType.replace('-', ' ')}</td>
+                        <td className="p-2 text-slate-600">{tr.method}</td>
+                        <td className="p-2">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              tr.result === 'pass'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : tr.result === 'marginal'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}
+                          >
+                            {tr.result}
+                          </span>
+                        </td>
+                        <td className="p-2 font-mono">{tr.testedQuantity} units</td>
+                        <td className="p-2 text-slate-500">{tr.testedBy}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-start gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Evidence Disclaimer:</strong> A recorded bench test is user-submitted empirical evidence of component functionality; it does not constitute accredited third-party or electrical safety certification.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500 italic">
+              No physical bench tests logged yet. You can log multimeter continuity, logic levels, or sensor readings from the Edit Component dialog.
+            </div>
+          )}
+
+          {item.provenanceBatchId && (
+            <div className="text-[11px] text-slate-500 font-mono">
+              Provenance Batch ID: {item.provenanceBatchId}
+            </div>
+          )}
+        </div>
+
         {/* Notes & Timestamp */}
         <div className="space-y-3 pt-2 border-t border-slate-100">
           <div>
