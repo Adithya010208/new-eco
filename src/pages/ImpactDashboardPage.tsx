@@ -105,7 +105,7 @@ export function ImpactDashboardPage({
             <Activity className="w-3.5 h-3.5" />
             <span>Empirical Hardware Accounting</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-white text-2xl sm:text-3xl font-bold tracking-tight">
             {t('impact.title', 'Hardware Impact & Circular Ledger')}
           </h1>
           <p className="text-xs sm:text-sm text-slate-200 max-w-2xl leading-relaxed">
@@ -130,7 +130,7 @@ export function ImpactDashboardPage({
             </div>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-[#132B3B]">
+            <span className="text-3xl font-bold tabular-nums text-[#132B3B]">
               {metrics.totalMassGrams >= 1000
                 ? (metrics.totalMassGrams / 1000).toFixed(2)
                 : metrics.totalMassGrams}
@@ -140,7 +140,7 @@ export function ImpactDashboardPage({
             </span>
           </div>
           <p className="text-[11px] text-slate-500">
-            Physical electronic components diverted from landfill into active circuits.
+            Recorded hardware mass allocated to reuse events.
           </p>
         </div>
 
@@ -155,7 +155,7 @@ export function ImpactDashboardPage({
             </div>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-[#132B3B]">
+            <span className="text-3xl font-bold tabular-nums text-[#132B3B]">
               {metrics.reuseCycles}
             </span>
             <span className="text-xs font-semibold text-slate-500">cycles</span>
@@ -176,7 +176,7 @@ export function ImpactDashboardPage({
             </div>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-[#132B3B]">
+            <span className="text-3xl font-bold tabular-nums text-[#132B3B]">
               {metrics.physicalBuilds}
             </span>
             <span className="text-xs font-semibold text-slate-500">verified</span>
@@ -197,7 +197,7 @@ export function ImpactDashboardPage({
             </div>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-[#087F83]">
+            <span className="text-3xl font-bold tabular-nums text-[#087F83]">
               {metrics.totalEcoPoints}
             </span>
             <span className="text-xs font-semibold text-slate-500">awarded</span>

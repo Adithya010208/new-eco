@@ -3,9 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { AlertTriangle, Wrench, RefreshCw, Cpu, Layers } from 'lucide-react';
+import { AssemblyPlacement } from './AssemblyPlacement';
+import { PinFocus } from './PinFocus';
 import { BenchLightingAndEnvironment } from './BenchLightingAndEnvironment';
 import { CameraController } from './CameraController';
 import { ArduinoUnoModel } from '../models/ArduinoUnoModel';
@@ -104,6 +107,9 @@ export function StudioCanvas(props: StudioCanvasProps) {
     onDistanceChange,
   } = props;
 
+  const componentPins = useMemo(() => Object.fromEntries(components.map(component => [component.id, pins.filter(pin => pin.componentId === component.id)])), [components, pins]);
+  const selectHandlers = useMemo(() => Object.fromEntries(components.map(component => [component.id, () => onSelectComponent(component.id)])), [components, onSelectComponent]);
+  const initialCameraPosition = useRef(cameraPosition);
   const [webGLAvailable, setWebGLAvailable] = useState<boolean>(true);
 
   // Check if WebGL context is available in this browser environment
@@ -161,7 +167,7 @@ export function StudioCanvas(props: StudioCanvasProps) {
       <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700 space-y-2">
         <div className="flex items-center gap-2">
           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#087F83] text-white">
-            Step {currentStep.stepNumber} of 6
+            Step {projectId === 'proj-night-light' ? currentStep.stepNumber + 1 : currentStep.stepNumber}
           </span>
           <h4 className="text-base font-bold text-white">
             {currentStep.title}
@@ -277,7 +283,7 @@ export function StudioCanvas(props: StudioCanvasProps) {
 
   if (!webGLAvailable) {
     return (
-      <div className="w-full h-full relative select-none">
+      <div className="w-full h-full relative select-none" role="region" aria-label="Interactive assembly model" tabIndex={0}>
         {renderFallback('WebGL is disabled or unsupported on this device.')}
       </div>
     );
@@ -287,18 +293,19 @@ export function StudioCanvas(props: StudioCanvasProps) {
     currentStep.stepNumber === 6 || simulationState.isSimulating;
 
   return (
-    <div className="w-full h-full relative select-none">
+    <div className="w-full h-full relative select-none" role="region" aria-label="Interactive assembly model" tabIndex={0}>
       <CanvasErrorBoundary
         fallback={(error, retry) => renderFallback(error.message, retry)}
       >
         <Canvas
           shadows
-          camera={{ position: cameraPosition, fov: 45 }}
-          gl={{ antialias: true, alpha: false }}
+          dpr={[1, 1.5]}
+          camera={{ position: initialCameraPosition.current, fov: 45 }}
+          gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping }}
           onPointerMissed={() => onSelectComponent(null)}
         >
           <Suspense fallback={null}>
-            <BenchLightingAndEnvironment />
+            <BenchLightingAndEnvironment ambientPercent={projectId === 'proj-night-light' ? ambientLightLuxPercent : 100} />
             <CameraController
               targetPosition={cameraPosition}
               targetLookAt={cameraTarget}
@@ -307,130 +314,130 @@ export function StudioCanvas(props: StudioCanvasProps) {
             {projectId === 'proj-night-light' ? (
               <>
                 {/* Arduino Uno Board */}
-                <ArduinoUnoModel
-                  position={[2.5, 0, 0]}
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-arduino')}><ArduinoUnoModel
+
                   isSelected={selectedComponentId === 'comp-arduino'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-arduino')}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-arduino')}
-                  onSelectComponent={() => onSelectComponent('comp-arduino')}
+                  activePins={componentPins['comp-arduino']}
+                  onSelectComponent={selectHandlers['comp-arduino']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* Half-Size Breadboard */}
-                <BreadboardModel
-                  position={[0.2, 0, 0]}
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-breadboard')}><BreadboardModel
+
                   isSelected={selectedComponentId === 'comp-breadboard'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-breadboard')}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-breadboard')}
-                  onSelectComponent={() => onSelectComponent('comp-breadboard')}
+                  activePins={componentPins['comp-breadboard']}
+                  onSelectComponent={selectHandlers['comp-breadboard']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* GL5528 Photoresistor (LDR) */}
-                <LDRModel
-                  position={[-0.6, 0.25, -0.6]}
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-ldr')}><LDRModel
+
                   isSelected={selectedComponentId === 'comp-ldr'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-ldr')}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-ldr')}
-                  onSelectComponent={() => onSelectComponent('comp-ldr')}
+                  activePins={componentPins['comp-ldr']}
+                  onSelectComponent={selectHandlers['comp-ldr']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* 10k Divider Resistor */}
-                <ResistorModel
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-res-10k')}><ResistorModel
                   position={[-0.4, 0.2, -0.9]}
                   colorBands={['#78350F', '#000000', '#EA580C', '#D97706']}
                   isSelected={selectedComponentId === 'comp-res-10k'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-res-10k')}
-                  onSelectComponent={() => onSelectComponent('comp-res-10k')}
-                />
+                  onSelectComponent={selectHandlers['comp-res-10k']}
+                /></AssemblyPlacement>
 
                 {/* 220 LED Current Limiting Resistor */}
-                <ResistorModel
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-res-220')}><ResistorModel
                   position={[0.8, 0.2, 0.2]}
                   colorBands={['#DC2626', '#DC2626', '#78350F', '#D97706']}
                   isSelected={selectedComponentId === 'comp-res-220'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-res-220')}
-                  onSelectComponent={() => onSelectComponent('comp-res-220')}
-                />
+                  onSelectComponent={selectHandlers['comp-res-220']}
+                /></AssemblyPlacement>
 
                 {/* 5mm Diffused Red LED Indicator */}
-                <LEDModel
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-led')}><LEDModel
                   position={[1.0, 0.3, 0.6]}
                   isIlluminated={(ambientLightLuxPercent ?? 100) < 40 || simulationState.isTriggered}
                   isSelected={selectedComponentId === 'comp-led'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-led')}
-                  onSelectComponent={() => onSelectComponent('comp-led')}
-                />
+                  onSelectComponent={selectHandlers['comp-led']}
+                /></AssemblyPlacement>
               </>
             ) : (
               <>
                 {/* Dustbin Model (with hinged lid synchronized to simulation state) */}
-                <DustbinModel
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-dustbin')}><DustbinModel
                   position={[-4.2, 0, 0]}
                   lidOpenProgress={simulationState.lidOpenProgress}
                   isSelected={selectedComponentId === 'comp-dustbin'}
-                  onSelectComponent={() => onSelectComponent('comp-dustbin')}
-                />
+                  onSelectComponent={selectHandlers['comp-dustbin']}
+                /></AssemblyPlacement>
 
                 {/* Arduino Uno Board */}
-                <ArduinoUnoModel
-                  position={[2.5, 0, 0]}
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-arduino')}><ArduinoUnoModel
+
                   isSelected={selectedComponentId === 'comp-arduino'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-arduino')}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-arduino')}
-                  onSelectComponent={() => onSelectComponent('comp-arduino')}
+                  activePins={componentPins['comp-arduino']}
+                  onSelectComponent={selectHandlers['comp-arduino']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* Half-Size Breadboard */}
-                <BreadboardModel
-                  position={[0.2, 0, 0]}
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-breadboard')}><BreadboardModel
+
                   isSelected={selectedComponentId === 'comp-breadboard'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-breadboard')}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-breadboard')}
-                  onSelectComponent={() => onSelectComponent('comp-breadboard')}
+                  activePins={componentPins['comp-breadboard']}
+                  onSelectComponent={selectHandlers['comp-breadboard']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* Dedicated External Regulated 5V Servo Power Supply */}
-                <ExternalPowerSupplyModel
-                  position={[-0.6, 0, -2.2]}
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-ext-power')}><ExternalPowerSupplyModel
+
                   isSelected={selectedComponentId === 'comp-ext-power'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-ext-power')}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-ext-power')}
-                  onSelectComponent={() => onSelectComponent('comp-ext-power')}
+                  activePins={componentPins['comp-ext-power']}
+                  onSelectComponent={selectHandlers['comp-ext-power']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* SG90 Micro Servo (Mounted directly inside Dustbin rear cradle) */}
-                <SG90ServoModel
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-servo')}><SG90ServoModel
                   position={[-4.2, 4.8, -1.95]}
                   rotation={[0, 0, 0]}
                   servoAngleDegrees={simulationState.servoAngleDegrees}
                   isSelected={selectedComponentId === 'comp-servo'}
                   isStepActive={currentStep.activeComponentIds.includes('comp-servo')}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-servo')}
-                  onSelectComponent={() => onSelectComponent('comp-servo')}
+                  activePins={componentPins['comp-servo']}
+                  onSelectComponent={selectHandlers['comp-servo']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* HC-SR04 Ultrasonic Distance Sensor (Mounted directly inside Dustbin front aperture) */}
-                <HCSR04Model
+                <AssemblyPlacement active={currentStep.activeComponentIds.includes('comp-sonar')}><HCSR04Model
                   position={[-4.2, 3.2, 1.70]}
                   rotation={[0, 0, 0]}
                   isSelected={selectedComponentId === 'comp-sonar'}
@@ -439,11 +446,11 @@ export function StudioCanvas(props: StudioCanvasProps) {
                   isTriggered={simulationState.isTriggered}
                   obstacleDistanceCm={simulationState.obstacleDistanceCm}
                   highlightPinIds={currentStep.highlightPinIds}
-                  activePins={pins.filter((p) => p.componentId === 'comp-sonar')}
-                  onSelectComponent={() => onSelectComponent('comp-sonar')}
+                  activePins={componentPins['comp-sonar']}
+                  onSelectComponent={selectHandlers['comp-sonar']}
                   onHoverPin={onHoverPin}
                   onSelectPin={onSelectPin}
-                />
+                /></AssemblyPlacement>
 
                 {/* Virtual Hand / Obstacle (Visible during live simulation step) */}
                 {isSimulationStep && (
@@ -456,11 +463,13 @@ export function StudioCanvas(props: StudioCanvasProps) {
               </>
             )}
 
+            <PinFocus pins={pins} ids={currentStep.highlightPinIds} onHover={onHoverPin} onSelect={onSelectPin} />
             {/* 3D Catmull-Rom Curved Jumper Wires */}
             <ConnectionRenderer
               wires={wires}
               pins={pins}
               activeWireIds={currentStep.activeWireIds}
+              highlightPinIds={currentStep.highlightPinIds}
               isSimulating={isSimulationStep}
               highlightWireId={highlightWireId}
               onHoverWire={onHoverWire}

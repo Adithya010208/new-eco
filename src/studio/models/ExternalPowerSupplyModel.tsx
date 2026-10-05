@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { HardwareLabel } from './HardwareLabel';
 import React, { useState } from 'react';
 import * as THREE from 'three';
 import { PinEndpoint } from '../types';
@@ -19,7 +20,7 @@ interface ExternalPowerSupplyModelProps {
   onSelectPin?: (pin: PinEndpoint) => void;
 }
 
-export function ExternalPowerSupplyModel({
+export const ExternalPowerSupplyModel = React.memo(function ExternalPowerSupplyModel({
   position = [-0.6, 0, -2.2],
   rotation = [0, 0, 0],
   isSelected = false,
@@ -69,11 +70,12 @@ export function ExternalPowerSupplyModel({
       </mesh>
 
       {/* Power Supply Label Banner */}
-      <mesh position={[0, 0.505, 0]}>
+      <mesh position={[0, 0.505, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.0, 0.6]} />
         <meshStandardMaterial color="#334155" roughness={0.6} side={THREE.DoubleSide} />
       </mesh>
 
+      <HardwareLabel text="5V DC" position={[-0.27, 0.515, -0.15]} width={0.6} />
       {/* Green 5V Power Active LED */}
       <mesh position={[-0.4, 0.52, 0.25]}>
         <sphereGeometry args={[0.04, 8, 8]} />
@@ -111,7 +113,7 @@ export function ExternalPowerSupplyModel({
         return (
           <group
             key={pin.id}
-            position={[0, 0.45, offsetZ]}
+            position={[pin.position[0] - position[0], pin.position[1] - position[1], pin.position[2] - position[2]]}
             onPointerOver={(e) => {
               e.stopPropagation();
               onHoverPin?.(pin);
@@ -145,4 +147,4 @@ export function ExternalPowerSupplyModel({
       })}
     </group>
   );
-}
+});

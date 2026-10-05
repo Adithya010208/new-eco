@@ -4,6 +4,7 @@
  */
 
 import React, { useRef, useState } from 'react';
+import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import { PinEndpoint } from '../types';
 
@@ -65,8 +66,7 @@ export function SG90ServoModel({
       )}
 
       {/* Main Translucent Blue Plastic Body (~22mm x 12mm x 23mm) */}
-      <mesh position={[0, 0, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.1, 0.9, 0.55]} />
+      <RoundedBox position={[0, 0, 0]} args={[1.1, 0.9, 0.55]} radius={0.045} smoothness={2} castShadow receiveShadow>
         <meshStandardMaterial
           color="#0284c7"
           roughness={0.25}
@@ -74,7 +74,7 @@ export function SG90ServoModel({
           transparent
           opacity={0.88}
         />
-      </mesh>
+      </RoundedBox>
 
       {/* Internal Motor Cylindrical Core Visible through casing */}
       <mesh position={[-0.2, -0.05, 0]}>

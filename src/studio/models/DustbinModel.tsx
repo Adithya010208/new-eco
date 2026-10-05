@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { HardwareLabel } from './HardwareLabel';
 import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
 
@@ -41,13 +42,15 @@ export function DustbinModel({
   const eyeletWorldZ = lidHingeZ + (eyeletRelY * sinA + eyeletRelZ * cosA);
 
   // Horn tip output
+  const hornAngle = lidOpenProgress * Math.PI / 2;
+  const hornTipX = 0.28 - Math.sin(hornAngle) * 0.76;
   const hornTipY = 5.52;
-  const hornTipZ = -2.35 + (lidOpenProgress * 0.25);
+  const hornTipZ = -1.95 - Math.cos(hornAngle) * 0.76;
 
   const pushrodMidY = (hornTipY + eyeletWorldY) / 2;
   const pushrodMidZ = (hornTipZ + eyeletWorldZ) / 2;
-  const rodLength = Math.max(0.4, Math.hypot(hornTipY - eyeletWorldY, hornTipZ - eyeletWorldZ));
-  const rodAngleX = Math.atan2(eyeletWorldZ - hornTipZ, eyeletWorldY - hornTipY);
+  const rodLength = Math.hypot(0.28 - hornTipX, hornTipY - eyeletWorldY, hornTipZ - eyeletWorldZ);
+  const rodRotation = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0.28 - hornTipX, eyeletWorldY - hornTipY, eyeletWorldZ - hornTipZ).normalize());
 
   return (
     <group
@@ -87,6 +90,14 @@ export function DustbinModel({
         />
       </mesh>
 
+      <mesh position={[0, 2.4, 0]} receiveShadow>
+        <cylinderGeometry args={[1.91, 1.71, 4.7, 32, 1, true]} />
+        <meshStandardMaterial color="#203b45" roughness={0.84} side={THREE.BackSide} />
+      </mesh>
+      <mesh position={[0, 0.12, 0]} castShadow>
+        <cylinderGeometry args={[1.82, 1.82, 0.2, 32]} />
+        <meshStandardMaterial color="#182e35" roughness={0.92} />
+      </mesh>
       {/* Bin Interior Bottom Floor */}
       <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.78, 32]} />
@@ -94,8 +105,8 @@ export function DustbinModel({
       </mesh>
 
       {/* Modern Top Rim Collar */}
-      <mesh position={[0, 4.8, 0]} castShadow>
-        <cylinderGeometry args={[2.08, 2.02, 0.35, 32]} />
+      <mesh position={[0, 4.8, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <torusGeometry args={[2.0, 0.1, 8, 48]} />
         <meshStandardMaterial
           color="#087F83"
           roughness={0.3}
@@ -128,6 +139,7 @@ export function DustbinModel({
         <meshBasicMaterial color="#087F83" />
       </mesh>
 
+      <HardwareLabel text="ECOBUILD" position={[0, 1.8, 1.93]} rotation={[0, 0, 0]} width={0.85} />
       {/* Rear Servo Mounting Cradle Bracket (Behind bin lid hinge at Z = -1.95) */}
       <group position={[0, 4.8, -1.95]}>
         {/* Sturdy cradle clip */}
@@ -188,19 +200,8 @@ export function DustbinModel({
 
       {/* Mechanical Wire Linkage Pushrod (From SG90 Horn to Lid Eyelet) */}
       {/* Dynamic line connecting servo horn at ~[-3.8+4.2, 4.8+0.72, -1.5-0.42] to lid eyelet */}
-      <mesh
-        position={[
-          0.28,
-          4.8 + 0.36 + (lidOpenProgress * 0.4),
-          -1.7 + (lidOpenProgress * 0.2),
-        ]}
-        rotation={[
-          -Math.PI / 6 + (lidOpenProgress * 0.35),
-          0,
-          0,
-        ]}
-      >
-        <cylinderGeometry args={[0.02, 0.02, 0.75, 8]} />
+      <mesh position={[(hornTipX + 0.28) / 2, pushrodMidY, pushrodMidZ]} quaternion={rodRotation} castShadow>
+        <cylinderGeometry args={[0.025, 0.025, rodLength, 8]} />
         <meshStandardMaterial
           color="#94a3b8"
           metalness={0.9}

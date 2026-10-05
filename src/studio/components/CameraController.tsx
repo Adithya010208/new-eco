@@ -34,7 +34,7 @@ export function CameraController({
   // Smooth camera interpolation towards desired viewpoint
   useFrame((_, delta) => {
     if (isTransitioning.current && controlsRef.current) {
-      const step = Math.min(1, delta * 3.5);
+      const step = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 1 - Math.exp(-delta * 5);
       camera.position.lerp(desiredPos.current, step);
       controlsRef.current.target.lerp(desiredLook.current, step);
       controlsRef.current.update();
@@ -51,6 +51,7 @@ export function CameraController({
   return (
     <OrbitControls
       ref={controlsRef}
+      onStart={() => { isTransitioning.current = false; }}
       enableDamping
       dampingFactor={0.08}
       minDistance={2.5}

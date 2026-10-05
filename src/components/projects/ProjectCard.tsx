@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -21,15 +22,17 @@ export function ProjectCard({
   onToggleSave,
   onSelect,
 }: ProjectCardProps) {
+  const { t } = useTranslation();
   const { project, coveragePercentage, missingCount, isFullyCovered, readinessState, recommendationReasons } = match;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden group">
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden group">
       {/* Visual illustration top frame */}
       <div
         className="w-full h-44 bg-[#F8FAFC] relative overflow-hidden cursor-pointer border-b border-slate-100"
         onClick={() => onSelect(project.id)}
       >
+        {(project.id === 'proj-smart-dustbin' || project.id === 'proj-night-light') && <span className="absolute bottom-3 left-3 z-10 rounded-lg bg-[#132B3B] text-white px-2.5 py-1 text-xs font-semibold">{t('studioPolish.guide')}</span>}
         <ProjectIllustration illustrationKey={project.illustrationKey} />
         
         {/* Quick Save button top-right */}
@@ -53,7 +56,7 @@ export function ProjectCard({
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
           {/* Clean Unboxed Metadata Line (Anti-Pill discipline) */}
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium mb-1.5">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-medium mb-1.5">
             <span>{project.category}</span>
             <span aria-hidden="true" className="text-slate-300">·</span>
             <span>{project.difficulty}</span>
@@ -67,7 +70,7 @@ export function ProjectCard({
           {/* Title */}
           <h3
             onClick={() => onSelect(project.id)}
-            className="text-base font-bold text-[#132B3B] group-hover:text-[#087F83] transition-colors cursor-pointer line-clamp-1"
+            className="text-base font-bold text-[#132B3B] group-hover:text-[#087F83] transition-colors cursor-pointer leading-snug"
           >
             {project.name}
           </h3>
@@ -81,7 +84,7 @@ export function ProjectCard({
           <div className="mt-4 pt-3 border-t border-slate-100">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="font-semibold text-slate-700">Hardware Coverage</span>
-              <span className="font-mono font-bold text-[#132B3B] tabular-nums">
+              <span className="text-2xl font-bold text-[#087F83] tabular-nums">
                 {coveragePercentage}%
               </span>
             </div>

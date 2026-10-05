@@ -1,3 +1,5 @@
+import { ProjectResources } from '../components/projects/ProjectResources';
+import { VoiceGuidance } from '../components/projects/VoiceGuidance';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -351,6 +353,7 @@ export function WorkspaceDetailPage({
               <h2 className="text-sm font-bold text-[#132B3B] uppercase tracking-wider">
                 High-Level Build Steps
               </h2>
+              <VoiceGuidance text={[project.name, ...project.highLevelOverview.map((step, index) => `Step ${index + 1}. ${step}`)].join('. ')} />
               <ol className="space-y-2.5 text-xs text-slate-700">
                 {project.highLevelOverview.map((step, idx) => (
                   <li key={idx} className="flex items-start gap-2.5">
@@ -401,6 +404,7 @@ export function WorkspaceDetailPage({
               </div>
             </div>
           </div>
+          <ProjectResources projectId={project.id} />
         </div>
       )}
 

@@ -1,3 +1,5 @@
+import { ProjectResources } from '../components/projects/ProjectResources';
+import { useTranslation } from 'react-i18next';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -70,6 +72,7 @@ export function BuildStudioPage({
   inventory,
   onAskMentor,
 }: BuildStudioPageProps) {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
 
   // Parse query parameters (?project=proj-smart-dustbin&workspace=...)
@@ -245,6 +248,7 @@ export function BuildStudioPage({
   }, [currentStep]);
 
   // Inspection states
+  const [studioPanel, setStudioPanel] = useState<'guide' | 'tools' | 'resources'>('guide');
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [inspectedPassportItem, setInspectedPassportItem] = useState<ComponentItem | null>(null);
   const [hoveredPin, setHoveredPin] = useState<PinEndpoint | null>(null);
@@ -423,10 +427,20 @@ export function BuildStudioPage({
   const handleSelectCameraPreset = useCallback(
     (preset: CameraPreset) => {
       setActiveCameraPreset(preset);
+      if (isNightLight && preset !== 'top-down') {
+        const target: [number, number, number] = preset === 'sensor-front' ? [-0.6, 0.5, -0.6] : preset === 'simulation' ? [1, 0.5, 0.6] : [0.8, 0.3, 0];
+        setCameraTarget(target);
+        setCameraPosition(preset === 'overview' ? [6, 7, 7] : [target[0] + 2.5, 4.5, target[2] + 3.5]);
+        return;
+      }
       switch (preset) {
+        case 'top-down':
+          setCameraPosition(isNightLight ? [1, 10, 0.01] : [-0.5, 15, 0.01]);
+          setCameraTarget(isNightLight ? [1, 0, 0] : [-0.5, 1, 0]);
+          break;
         case 'overview':
-          setCameraPosition([7, 7, 7]);
-          setCameraTarget([-0.5, 1.5, 0]);
+          setCameraPosition([10, 10, 11]);
+          setCameraTarget([-1, 2.3, 0]);
           break;
         case 'power-rails':
           setCameraPosition([3.5, 4.5, -2]);
@@ -441,16 +455,16 @@ export function BuildStudioPage({
           setCameraTarget([-3.8, 3.2, 3]);
           break;
         case 'linkage':
-          setCameraPosition([-5, 6.8, -2]);
-          setCameraTarget([-3.8, 4.8, 0]);
+          setCameraPosition([-8, 8, -7]);
+          setCameraTarget([-4, 5.2, -1.9]);
           break;
         case 'simulation':
-          setCameraPosition([4, 6.5, 6.5]);
-          setCameraTarget([-2.5, 2.5, 1]);
+          setCameraPosition([9, 9, 12]);
+          setCameraTarget([-1.6, 3, 1]);
           break;
       }
     },
-    []
+    [isNightLight]
   );
 
   // Viewport Expansion & Fullscreen Toggle
@@ -462,11 +476,17 @@ export function BuildStudioPage({
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
+        e.target instanceof HTMLSelectElement ||
+        (e.target instanceof HTMLElement && (
+          e.target.isContentEditable || e.target.closest('[role="dialog"]') ||
+          (e.key !== 'Escape' && e.target.closest('button, a'))
+        ))
       ) {
         return;
       }
-      if (e.key === 'ArrowRight') {
+      if (e.key === 'Escape') {
+        setIsExpanded(false);
+      } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         handleNextStep();
       } else if (e.key === 'ArrowLeft') {
@@ -558,7 +578,7 @@ export function BuildStudioPage({
   // Unsupported project screen (ensures unsupported projects do not show misleading Smart Dustbin guide)
   if (!isSupportedProject) {
     return (
-      <div className="space-y-6 pb-12">
+      <div className="studio-page space-y-3 pb-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-2xs space-y-6 text-center max-w-2xl mx-auto my-8">
           <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto border border-amber-200">
             <Wrench className="w-7 h-7" />
@@ -617,7 +637,7 @@ export function BuildStudioPage({
   return (
     <div className="space-y-6 pb-12">
       {/* Studio Header Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-2xs space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -641,10 +661,10 @@ export function BuildStudioPage({
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#132B3B]">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#132B3B]">
               3D Build Studio: {project.name}
             </h1>
-            <p className="text-xs text-slate-600">
+            <p className="hidden 2xl:block text-xs text-slate-600">
               Interactive 3D assembly and expected behavior preview powered by Three.js & WebGL. Rotate with left click, pan with right click, zoom with scroll.
             </p>
           </div>
@@ -660,7 +680,7 @@ export function BuildStudioPage({
             </button>
 
             <button
-              onClick={() => setShowSimulatorPanel((prev) => !prev)}
+              onClick={() => { setShowSimulatorPanel(true); setSelectedComponentId(null); setStudioPanel('tools'); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
                 showSimulatorPanel
                   ? 'bg-emerald-600 text-white border-emerald-600'
@@ -668,7 +688,7 @@ export function BuildStudioPage({
               }`}
             >
               <Sliders className="w-3.5 h-3.5" />
-              <span>{showSimulatorPanel ? 'Hide Behavior Preview' : 'Expected Behavior Preview'}</span>
+              <span>{t('studioLayout.preview')}</span>
             </button>
 
             <button
@@ -722,13 +742,14 @@ export function BuildStudioPage({
       </div>
 
       {/* Main 3D Viewport & Interactive Stage */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="studio-workspace grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_390px] gap-3 items-start">
         {/* 3D Scene Viewport Canvas */}
         <div
           className={`${
-            isExpanded ? 'lg:col-span-12 h-[680px] sm:h-[780px]' : 'lg:col-span-8 h-[520px] sm:h-[620px]'
+            isExpanded ? 'studio-scene studio-scene-expanded' : 'studio-scene'
           } bg-slate-900 rounded-2xl border border-slate-700/80 overflow-hidden shadow-lg relative transition-all duration-300`}
         >
+          <div className="absolute inset-x-0 top-16 bottom-14 sm:bottom-12">
           <StudioCanvas
             currentStep={currentStep}
             components={components}
@@ -744,13 +765,14 @@ export function BuildStudioPage({
             cameraTarget={cameraTarget}
             projectId={project.id}
             ambientLightLuxPercent={ambientLightPercent}
-            onSelectComponent={(id) => setSelectedComponentId(id)}
-            onHoverPin={(pin) => setHoveredPin(pin)}
-            onSelectPin={(pin) => setSelectedPin(pin)}
-            onHoverWire={(wire) => setHoveredWire(wire)}
-            onSelectWire={(wire) => setSelectedWire(wire)}
+            onSelectComponent={(id) => { setSelectedComponentId(id); if (id) setStudioPanel('tools'); }}
+            onHoverPin={setHoveredPin}
+            onSelectPin={setSelectedPin}
+            onHoverWire={setHoveredWire}
+            onSelectWire={setSelectedWire}
             onDistanceChange={handleDistanceChange}
           />
+          </div>
 
           {/* Floating Pin Endpoint HUD Tooltip */}
           {(hoveredPin || selectedPin) && (
@@ -767,18 +789,19 @@ export function BuildStudioPage({
           )}
 
           {/* Top Floating Viewport Control Toolbar */}
-          <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+          <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between gap-2 pointer-events-none">
             {/* Quick Camera Preset Selector Pills */}
-            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10 pointer-events-auto shadow-sm overflow-x-auto max-w-[calc(100%-120px)] sm:max-w-none">
+            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10 pointer-events-auto shadow-sm overflow-x-auto min-w-0 flex-1">
               <Camera className="w-3.5 h-3.5 text-slate-400 mx-1 hidden sm:inline shrink-0" />
               {(
                 [
-                  { id: 'overview', label: 'Overview' },
-                  { id: 'power-rails', label: 'Power Rails' },
-                  { id: 'servo-mount', label: 'Servo' },
-                  { id: 'sensor-front', label: 'Sonar' },
-                  { id: 'linkage', label: 'Linkage' },
-                  { id: 'simulation', label: 'Preview' },
+                  { id: 'overview', label: t('studioPolish.overview') },
+                  { id: 'top-down', label: t('studioPolish.top') },
+                  { id: 'power-rails', label: t('studioPolish.rails') },
+                  { id: 'servo-mount', label: isNightLight ? t('studioPolish.circuit') : t('studioPolish.servo') },
+                  { id: 'sensor-front', label: isNightLight ? t('studioPolish.ldr') : t('studioPolish.sonar') },
+                  { id: 'linkage', label: isNightLight ? t('studioPolish.wiring') : t('studioPolish.linkage') },
+                  { id: 'simulation', label: t('studioPolish.preview') },
                 ] as const
               ).map((preset) => (
                 <button
@@ -797,7 +820,7 @@ export function BuildStudioPage({
             </div>
 
             {/* Viewport Control Badges (Right side) */}
-            <div className="flex items-center gap-1.5 pointer-events-auto">
+            <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
               {simulationState.isTriggered && (
                 <span className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500 text-white shadow-md animate-pulse uppercase tracking-wider hidden sm:inline">
                   Triggered
@@ -807,6 +830,7 @@ export function BuildStudioPage({
               <button
                 onClick={handleReplayStep}
                 className="p-1.5 rounded-lg bg-black/60 backdrop-blur-md text-slate-300 hover:text-white hover:bg-black/80 border border-white/10 transition-colors cursor-pointer"
+                aria-label="Reset camera"
                 title="Reset Camera Preset (R)"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -815,6 +839,7 @@ export function BuildStudioPage({
               <button
                 onClick={() => setIsExpanded((prev) => !prev)}
                 className="p-1.5 rounded-lg bg-black/60 backdrop-blur-md text-slate-300 hover:text-white hover:bg-black/80 border border-white/10 transition-colors cursor-pointer"
+                aria-label={isExpanded ? 'Collapse viewport' : 'Expand viewport'}
                 title={isExpanded ? 'Collapse Viewport (F)' : 'Expand Viewport (F)'}
               >
                 {isExpanded ? (
@@ -829,14 +854,51 @@ export function BuildStudioPage({
           {/* Canvas Bottom Instruction Hint */}
           <div className="absolute bottom-3 left-4 right-4 z-10 flex items-center justify-between text-[11px] text-slate-400 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 pointer-events-none">
             <span>Click any component or pin to inspect details. Left drag to rotate, right drag to pan, wheel to zoom.</span>
-            <span className="hidden sm:inline font-mono text-[10px] text-slate-400">
+            <span className="hidden 2xl:inline font-mono text-[10px] text-slate-400">
               Shortcuts: [←/→] Steps · [Space] Tour · [R] Reset · [F] Expand
             </span>
           </div>
         </div>
 
         {/* Right-Hand Control & Inspector Column */}
-        <div className={`${isExpanded ? 'lg:col-span-12' : 'lg:col-span-4'} space-y-4`}>
+        <div className="studio-sidebar min-w-0 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-2 border-b border-slate-200 shrink-0" role="group" aria-label="Studio panels">
+            {(['guide', 'parts', 'preview', 'resources'] as const).map(panel => {
+              const active = panel === 'resources' ? studioPanel === 'resources' : panel === 'guide' ? studioPanel === 'guide' : studioPanel === 'tools' && (panel === 'preview' ? showSimulatorPanel && !selectedComponentSpec : !showSimulatorPanel || Boolean(selectedComponentSpec));
+              return <button key={panel} aria-pressed={active} className={`px-2 py-2 rounded-lg text-xs font-semibold ${active ? 'bg-[#087F83] text-white' : 'text-slate-600 hover:bg-slate-100'}`} onClick={() => { setStudioPanel(panel === 'guide' ? 'guide' : panel === 'resources' ? 'resources' : 'tools'); if (panel !== 'guide') { setShowSimulatorPanel(panel === 'preview'); setSelectedComponentId(null); } }}>{t(panel === 'resources' ? 'buildSupport.resources' : `studioLayout.${panel}`)}</button>;
+            })}
+          </div>
+          <div className="studio-panel-content min-h-0 overflow-y-auto overscroll-contain" tabIndex={0} role="region" aria-label="Studio panel">
+          {studioPanel === 'guide' ? (
+
+      <StepPlayerControls
+        steps={steps}
+        currentStepIndex={currentStepIndex}
+        completedStepIndices={completedStepIndices}
+        isPlaying={isPlaying}
+        playbackSpeed={playbackSpeed}
+        activeCameraPreset={activeCameraPreset}
+        onSelectStep={handleSelectStep}
+        onPrevStep={handlePrevStep}
+        onNextStep={handleNextStep}
+        onTogglePlay={handleTogglePlay}
+        onToggleSpeed={handleToggleSpeed}
+        onReplayStep={handleReplayStep}
+        onToggleStepCompleted={handleToggleStepCompleted}
+        onSelectCameraPreset={handleSelectCameraPreset}
+        onAskMentorAboutStep={(step) => {
+          if (onAskMentor) {
+            onAskMentor(
+              project.id,
+              workspaceId,
+              `I need guidance on Step ${step.stepNumber} (${step.title}): `,
+              `Build Studio - Step ${step.stepNumber}: ${step.shortName}`
+            );
+          }
+        }}
+      />
+          ) : studioPanel === 'resources' ? <ProjectResources projectId={project.id} stepId={currentStep.id} /> : <>
+
           {/* Component Inspector Panel (If selected) */}
           {selectedComponentSpec ? (
             <ComponentInspectorPanel
@@ -890,7 +952,9 @@ export function BuildStudioPage({
                   return (
                     <div
                       key={comp.id}
-                      onClick={() => setSelectedComponentId(comp.id)}
+                      onClick={() => { setSelectedComponentId(comp.id); setStudioPanel('tools'); }}
+                      role="button" tabIndex={0}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedComponentId(comp.id); } }}
                       className="p-2.5 bg-slate-50 hover:bg-[#EAF4F3]/60 rounded-xl border border-slate-200/80 transition-colors cursor-pointer flex items-center justify-between gap-3"
                     >
                       <div className="space-y-0.5">
@@ -925,57 +989,10 @@ export function BuildStudioPage({
             </div>
           )}
 
-          {/* Quick toggle between Manifest and Simulator */}
-          {!selectedComponentSpec && (
-            <div className="flex items-center justify-between text-xs px-1">
-              <button
-                onClick={() => setShowSimulatorPanel(false)}
-                className={`font-semibold hover:underline cursor-pointer ${
-                  !showSimulatorPanel ? 'text-[#087F83]' : 'text-slate-500'
-                }`}
-              >
-                ← View Components Manifest
-              </button>
-              <button
-                onClick={() => setShowSimulatorPanel(true)}
-                className={`font-semibold hover:underline cursor-pointer ${
-                  showSimulatorPanel ? 'text-[#087F83]' : 'text-slate-500'
-                }`}
-              >
-                Open Behavior Preview →
-              </button>
-            </div>
-          )}
+          </>}
+          </div>
         </div>
       </div>
-
-      {/* Assembly Step Player & Controls */}
-      <StepPlayerControls
-        steps={steps}
-        currentStepIndex={currentStepIndex}
-        completedStepIndices={completedStepIndices}
-        isPlaying={isPlaying}
-        playbackSpeed={playbackSpeed}
-        activeCameraPreset={activeCameraPreset}
-        onSelectStep={handleSelectStep}
-        onPrevStep={handlePrevStep}
-        onNextStep={handleNextStep}
-        onTogglePlay={handleTogglePlay}
-        onToggleSpeed={handleToggleSpeed}
-        onReplayStep={handleReplayStep}
-        onToggleStepCompleted={handleToggleStepCompleted}
-        onSelectCameraPreset={handleSelectCameraPreset}
-        onAskMentorAboutStep={(step) => {
-          if (onAskMentor) {
-            onAskMentor(
-              project.id,
-              workspaceId,
-              `I need guidance on Step ${step.stepNumber} (${step.title}): `,
-              `Build Studio - Step ${step.stepNumber}: ${step.shortName}`
-            );
-          }
-        }}
-      />
 
       {/* Component Passport Modal */}
       {inspectedPassportItem && (

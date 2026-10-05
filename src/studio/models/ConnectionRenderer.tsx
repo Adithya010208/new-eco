@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { WireConnection, PinEndpoint } from '../types';
 
@@ -11,6 +11,7 @@ interface ConnectionRendererProps {
   wires: WireConnection[];
   pins: PinEndpoint[];
   activeWireIds: string[];
+  highlightPinIds?: string[];
   isSimulating?: boolean;
   highlightWireId?: string | null;
   onHoverWire?: (wire: WireConnection | null) => void;
@@ -21,6 +22,7 @@ export function ConnectionRenderer({
   wires,
   pins,
   activeWireIds,
+  highlightPinIds = [],
   isSimulating = false,
   highlightWireId = null,
   onHoverWire,
@@ -48,7 +50,7 @@ export function ConnectionRenderer({
             wire={wire}
             fromPin={fromPin}
             toPin={toPin}
-            isHighlighted={highlightWireId === wire.id}
+            isHighlighted={highlightWireId === wire.id || (highlightPinIds.includes(wire.fromPinId) && highlightPinIds.includes(wire.toPinId))}
             isSimulating={isSimulating}
             onHoverWire={onHoverWire}
             onSelectWire={onSelectWire}
@@ -81,7 +83,7 @@ function SingleWire({
   const [hovered, setHovered] = useState(false);
 
   // Generate smooth 3D Catmull-Rom curve between pins with graceful arching
-  const { geometry, startPos, endPos } = useMemo(() => {
+  const { geometry, startPos, endPos, startRotation, endRotation } = useMemo(() => {
     const p1 = new THREE.Vector3(...fromPin.position);
     const p2 = new THREE.Vector3(...toPin.position);
 
@@ -100,22 +102,30 @@ function SingleWire({
 
     const curve = new THREE.CatmullRomCurve3([
       p1,
-      new THREE.Vector3(p1.x, p1.y + 0.3, p1.z),
-      mid,
-      new THREE.Vector3(p2.x, p2.y + 0.3, p2.z),
+      p1.clone().addScaledVector(new THREE.Vector3(...(fromPin.direction ?? [0, 1, 0])), 0.25),
+      ...(wire.midPoints?.map(p => new THREE.Vector3(...p)) ?? [mid]),
+      p2.clone().addScaledVector(new THREE.Vector3(...(toPin.direction ?? [0, 1, 0])), 0.25),
       p2,
     ]);
 
     const tubeGeom = new THREE.TubeGeometry(
       curve,
       32,
-      isHighlighted || hovered ? 0.045 : 0.03,
+      0.025,
       8,
       false
     );
 
-    return { geometry: tubeGeom, startPos: p1, endPos: p2 };
-  }, [fromPin.position, toPin.position, wire.curvature, isHighlighted, hovered]);
+    const startDirection = new THREE.Vector3(...(fromPin.direction ?? [0, 1, 0])).normalize();
+    const endDirection = new THREE.Vector3(...(toPin.direction ?? [0, 1, 0])).normalize();
+    return { geometry: tubeGeom,
+      startPos: p1.clone().addScaledVector(startDirection, 0.12),
+      endPos: p2.clone().addScaledVector(endDirection, 0.12),
+      startRotation: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), startDirection),
+      endRotation: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), endDirection) };
+  }, [fromPin.position, toPin.position, fromPin.direction, toPin.direction, wire.curvature, wire.midPoints]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
     <group
@@ -145,12 +155,12 @@ function SingleWire({
       </mesh>
 
       {/* Terminal Dupont Sleeves (Black connector boots at pin ends) */}
-      <mesh position={[startPos.x, startPos.y + 0.15, startPos.z]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.3, 8]} />
+      <mesh position={startPos} quaternion={startRotation}>
+        <boxGeometry args={[0.085, 0.24, 0.085]} />
         <meshStandardMaterial color="#0f172a" roughness={0.8} />
       </mesh>
-      <mesh position={[endPos.x, endPos.y + 0.15, endPos.z]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.3, 8]} />
+      <mesh position={endPos} quaternion={endRotation}>
+        <boxGeometry args={[0.085, 0.24, 0.085]} />
         <meshStandardMaterial color="#0f172a" roughness={0.8} />
       </mesh>
     </group>

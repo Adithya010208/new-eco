@@ -349,7 +349,7 @@ export function ProfilePage({
   };
 
   return (
-    <div className="max-w-4xl space-y-8 pb-16">
+    <div className="max-w-5xl mx-auto space-y-6 pb-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
@@ -363,7 +363,7 @@ export function ProfilePage({
             {mode === 'account' ? 'Cloud Account Mode' : 'Local Demo Mode'}
           </span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#132B3B]">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#132B3B]">
           {mode === 'account'
             ? 'Account Profile & Maker Directory Settings'
             : 'Profile & Maker Preferences'}
@@ -730,6 +730,8 @@ export function ProfilePage({
       {/* ======================================================== */}
       {/* SECTION 1: DISCOVERABLE MAKER PROFILE (PHASE 4B1)        */}
       {/* ======================================================== */}
+      <details className="rounded-2xl border border-slate-200 bg-white group">
+        <summary className="cursor-pointer p-4 font-semibold text-sm text-[#132B3B]">{t('studioLayout.publicProfile')}</summary>
       <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-2xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div>
@@ -1086,10 +1088,13 @@ export function ProfilePage({
           </div>
         </div>
       </section>
+      </details>
 
       {/* ======================================================== */}
       {/* SECTION 2: PRIVATE PREFERENCES & RANKING WEIGHTS         */}
       {/* ======================================================== */}
+      <details className="rounded-2xl border border-slate-200 bg-white">
+        <summary className="cursor-pointer p-4 font-semibold text-sm text-[#132B3B]">{t('studioLayout.preferences')}</summary>
       <form
         onSubmit={handleSavePrivatePreferences}
         className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-2xs space-y-6"
@@ -1240,7 +1245,10 @@ export function ProfilePage({
           </button>
         </div>
       </form>
+      </details>
 
+      <details className="rounded-2xl border border-slate-200 bg-white">
+        <summary className="cursor-pointer p-4 font-semibold text-sm text-[#132B3B]">{t('studioLayout.lab')}</summary>
       {/* Institutional Lab Pilot & Academic Pathways Section */}
       <InstitutionalPilotSection
         activeUser={activeUser || {
@@ -1255,6 +1263,7 @@ export function ProfilePage({
         userInventory={userInventory}
         userLedgerCount={userLedgerCount}
       />
+      </details>
     </div>
   );
 }

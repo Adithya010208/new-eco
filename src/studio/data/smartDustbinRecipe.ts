@@ -525,6 +525,7 @@ export const SMART_DUSTBIN_WIRES: WireConnection[] = [
     hexColor: '#EF4444',
     signalName: 'Servo Motor +5V Power (From External Rail)',
     stepIntroduced: 2, // Step 3
+    midPoints: [[-3.5, 4.4, -2.5], [-1.8, 2.0, -2.8], [-1.2, 0.7, -2.5]],
     curvature: 0.45,
     description: 'Supplies peak operating and stall current to the SG90 motor directly from the dedicated external 5V rail.',
   },
@@ -538,6 +539,7 @@ export const SMART_DUSTBIN_WIRES: WireConnection[] = [
     hexColor: '#78350F',
     signalName: 'Servo Motor Ground Return (Brown Wire)',
     stepIntroduced: 2, // Step 3
+    midPoints: [[-3.5, 4.4, -2.65], [-1.8, 2.0, -2.9499999999999997], [-1.2, 0.7, -2.65]],
     curvature: 0.45,
     description: 'Returns motor coil current safely to the common ground plane.',
   },
@@ -551,6 +553,7 @@ export const SMART_DUSTBIN_WIRES: WireConnection[] = [
     hexColor: '#F97316',
     signalName: 'Servo 50Hz PWM Signal Line (Pin 9)',
     stepIntroduced: 2, // Step 3
+    midPoints: [[-3.5, 4.4, -2.8], [-1.8, 2.0, -3.0999999999999996], [-1.2, 0.7, -2.8]],
     curvature: 0.5,
     description: 'Carries 50Hz PWM position pulses from Arduino Pin 9 to command servo rotation (nominal 1000µs idle to 2000µs active in model).',
   },
@@ -566,6 +569,7 @@ export const SMART_DUSTBIN_WIRES: WireConnection[] = [
     hexColor: '#EF4444',
     signalName: 'Sensor +5V Logic VCC (Clean Rail)',
     stepIntroduced: 3, // Step 4
+    midPoints: [[-4.42, 2.4, 2.4], [-1.8, 2.0, 2.8], [-1.2, 0.7, 2.0]],
     curvature: 0.4,
     description: 'Powers the internal 40kHz oscillator and receiving amplifier of the HC-SR04 from the clean Arduino 5V rail.',
   },
@@ -579,6 +583,7 @@ export const SMART_DUSTBIN_WIRES: WireConnection[] = [
     hexColor: '#1E293B',
     signalName: 'Sensor Ground GND',
     stepIntroduced: 3, // Step 4
+    midPoints: [[-4.27, 2.4, 2.4], [-1.6500000000000001, 2.0, 2.8], [-1.05, 0.7, 2.0]],
     curvature: 0.4,
     description: 'Ground connection for the HC-SR04 ultrasonic module.',
   },
@@ -592,6 +597,7 @@ export const SMART_DUSTBIN_WIRES: WireConnection[] = [
     hexColor: '#10B981',
     signalName: 'Sonar Trigger Line (Pin 11)',
     stepIntroduced: 3, // Step 4
+    midPoints: [[-4.12, 2.4, 2.4], [-1.5, 2.0, 2.8], [-0.8999999999999999, 0.7, 2.0]],
     curvature: 0.55,
     description: 'Sends short 10µs HIGH pulses from Arduino Pin 11 to initiate acoustic wave burst.',
   },
@@ -605,6 +611,7 @@ export const SMART_DUSTBIN_WIRES: WireConnection[] = [
     hexColor: '#0EA5E9',
     signalName: 'Sonar Echo Return Line (Pin 12)',
     stepIntroduced: 3, // Step 4
+    midPoints: [[-3.9699999999999998, 2.4, 2.4], [-1.35, 2.0, 2.8], [-0.75, 0.7, 2.0]],
     curvature: 0.55,
     description: 'Carries high-pulse duration from sensor to Arduino Pin 12 to calculate flight time: distance = (duration * 0.0343) / 2.',
   },
@@ -629,8 +636,8 @@ export const SMART_DUSTBIN_STEPS: AssemblyStep[] = [
     activeWireIds: [],
     highlightPinIds: [],
     cameraPreset: 'overview',
-    cameraPosition: [7, 7, 7],
-    cameraTarget: [-0.5, 1.5, 0],
+    cameraPosition: [10, 10, 11],
+    cameraTarget: [-1, 2.3, 0],
     safetyWarning: 'Always keep USB and power supplies disconnected from the Arduino while inspecting or re-routing jumper leads.',
     checkpointTip: 'EcoBuild passport tip: Salvaged SG90 servos should turn smoothly by hand without crunching internal gear teeth.',
     powerDesignNote: 'Independent power for inductive actuators is standard engineering best practice for microcontrollers.',
@@ -757,8 +764,8 @@ export const SMART_DUSTBIN_STEPS: AssemblyStep[] = [
     activeWireIds: SMART_DUSTBIN_WIRES.map((w) => w.id),
     highlightPinIds: [],
     cameraPreset: 'linkage',
-    cameraPosition: [-5, 6.8, -2],
-    cameraTarget: [-3.8, 4.8, 0],
+    cameraPosition: [-8, 8, -7],
+    cameraTarget: [-4, 5.2, -1.9],
     safetyWarning: 'Do not screw the servo arm down until after confirming 0° idle position in software to prevent back-driving gears.',
     checkpointTip: 'Mechanical advantage: using the outer hole gives greater lid angular lift; the inner hole gives greater pushing torque.',
     powerDesignNote: 'A smooth mechanical linkage with minimal friction keeps servo motor current draw well within 250mA during motion.',
@@ -772,7 +779,7 @@ export const SMART_DUSTBIN_STEPS: AssemblyStep[] = [
     detailedInstructions: [
       'Notice: This preview demonstrates the expected touchless lid timing and movement using a client-side behavioral model.',
       'It does not execute binary microcontroller firmware or solve SPICE analog electrical circuits.',
-      'Drag the Virtual Hand Distance slider below or click "Approach Hand" to bring the virtual obstacle within 15 cm.',
+      'Open the Simulation panel and drag Virtual Hand Distance or click "Approach Hand" to bring the virtual obstacle within 15 cm.',
       'When virtual distance < 15cm, the model illustrates the expected trigger cycle: command angle transitions to 90° and the lid lifts to 75°.',
       'After an illustrative 2.5 second clearance hold, the model returns the lid to the closed resting position.',
     ],
@@ -780,8 +787,8 @@ export const SMART_DUSTBIN_STEPS: AssemblyStep[] = [
     activeWireIds: SMART_DUSTBIN_WIRES.map((w) => w.id),
     highlightPinIds: ['uno-d9', 'uno-d11', 'uno-d12', 'sonar-echo', 'servo-sig'],
     cameraPreset: 'simulation',
-    cameraPosition: [4, 6.5, 6.5],
-    cameraTarget: [-2.5, 2.5, 1],
+    cameraPosition: [9, 9, 12],
+    cameraTarget: [-1.6, 3, 1],
     safetyWarning: 'Model Values: Distance, servo angle, and timers shown are illustrative model parameters rather than physical workbench sensor measurements.',
     checkpointTip: 'Ready for real workbench assembly! Complete this learning guide to record your study progress.',
     powerDesignNote: 'Workbench verification must confirm that actual servo power supplies and common ground connections are secure.',

@@ -1,5 +1,9 @@
 # EcoBuild (Phase 2: The Collaborative Maker Network)
 
+## Deployment and current build experience
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for GitHub → Vercel deployment, Firebase configuration and direct-route support. The repository includes the polished 3D Studio, a compact model/guide layout, optional English voice narration and curated build references. Use Node.js 24 and `npm ci` for reproducible installs.
+
 **EcoBuild** helps people turn unused, salvaged, and spare electronic components into useful, working projects.
 
 In **Phase 2**, EcoBuild expands from single-user workbench inventory matching into a **Collaborative Maker Network**, answering the question:

@@ -1,9 +1,11 @@
+import { VoiceGuidance } from '../../components/projects/VoiceGuidance';
+import { useTranslation } from 'react-i18next';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -45,7 +47,6 @@ export function StepPlayerControls({
   completedStepIndices,
   isPlaying,
   playbackSpeed,
-  activeCameraPreset,
   onSelectStep,
   onPrevStep,
   onNextStep,
@@ -53,23 +54,81 @@ export function StepPlayerControls({
   onToggleSpeed,
   onReplayStep,
   onToggleStepCompleted,
-  onSelectCameraPreset,
   onAskMentorAboutStep,
 }: StepPlayerControlsProps) {
+  const { t } = useTranslation();
+  const guideRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    guideRef.current?.parentElement?.scrollTo({ top: 0 });
+  }, [currentStepIndex]);
   const currentStep = steps[currentStepIndex];
   const isCompleted = completedStepIndices.includes(currentStepIndex);
 
-  const cameraPresets: { preset: CameraPreset; label: string }[] = [
-    { preset: 'overview', label: 'Overview' },
-    { preset: 'power-rails', label: 'Power Rails' },
-    { preset: 'servo-mount', label: 'Servo & PWM' },
-    { preset: 'sensor-front', label: 'Sonar Mount' },
-    { preset: 'linkage', label: 'Linkage Arm' },
-    { preset: 'simulation', label: 'Behavior Preview' },
-  ];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 space-y-4">
+    <div ref={guideRef} className="bg-white p-3 space-y-3">
+      {/* Bottom Controls Bar: Playback + Camera Presets */}
+      <div className="sticky top-0 z-10 bg-white border-b border-slate-200 py-2 flex items-center justify-center gap-2">
+        {/* Playback Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onPrevStep}
+            disabled={currentStepIndex === 0}
+            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            aria-label="Previous Step" title="Previous Step"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={onTogglePlay}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-lg shadow-xs transition-colors cursor-pointer"
+            title={isPlaying ? 'Pause Auto-Play' : 'Play Step-by-Step'}
+          >
+            {isPlaying ? (
+              <>
+                <Pause className="w-3.5 h-3.5" />
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5" />
+                <span>Auto-Play</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={onToggleSpeed}
+            className="px-2.5 py-2 text-xs font-mono font-semibold text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+            title="Change Playback Speed"
+          >
+            {playbackSpeed}x
+          </button>
+
+          <button
+            onClick={onReplayStep}
+            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+            aria-label="Replay Step View" title="Replay Step View"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={onNextStep}
+            disabled={currentStepIndex === steps.length - 1}
+            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            aria-label="Next Step" title="Next Step"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+      </div>
+      <details className="rounded-lg border border-[#087F83]/20">
+        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[#087F83]">{t('buildSupport.voice')}</summary>
+        <VoiceGuidance text={[`Step ${currentStepIndex + 1}. ${currentStep.title}.`, currentStep.summary, ...currentStep.detailedInstructions.map((instruction, index) => `Action ${index + 1}. ${instruction}`), currentStep.safetyWarning ? `Safety. ${currentStep.safetyWarning}` : '', currentStep.powerDesignNote ? `Power. ${currentStep.powerDesignNote}` : ''].join(' ')} />
+      </details>
       {/* Step Progress Tracker Pill Bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
@@ -81,7 +140,11 @@ export function StepPlayerControls({
           </span>
         </div>
 
-        <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+        <input type="range" min={0} max={steps.length - 1} value={currentStepIndex}
+          onChange={event => onSelectStep(Number(event.target.value))}
+          aria-label="Assembly step" aria-valuetext={`Step ${currentStepIndex + 1}: ${currentStep.title}`}
+          className="w-full accent-[#087F83]" />
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {steps.map((step, idx) => {
             const isCurrent = idx === currentStepIndex;
             const isDone = completedStepIndices.includes(idx);
@@ -97,6 +160,7 @@ export function StepPlayerControls({
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100/60'
                     : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
                 }`}
+                aria-current={isCurrent ? 'step' : undefined}
                 title={step.title}
               >
                 <div className="flex items-center gap-1">
@@ -107,7 +171,7 @@ export function StepPlayerControls({
                       {idx + 1}
                     </span>
                   )}
-                  <span className="hidden md:inline text-[11px] font-semibold truncate max-w-[80px]">
+                  <span className="text-[11px] font-semibold leading-snug">
                     {step.shortName}
                   </span>
                 </div>
@@ -118,13 +182,13 @@ export function StepPlayerControls({
       </div>
 
       {/* Step Title & Summary Header */}
-      <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="pt-2 border-t border-slate-100 flex flex-col gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-[#087F83] text-white tracking-wider">
-              Step {currentStep.stepNumber}
+              Step {currentStepIndex + 1}
             </span>
-            <h3 className="text-base sm:text-lg font-bold text-[#132B3B]">
+            <h3 className="text-base font-bold text-[#132B3B]">
               {currentStep.title}
             </h3>
           </div>
@@ -134,12 +198,12 @@ export function StepPlayerControls({
         </div>
 
         {/* Step Actions: Ask Mentor & Mark Completed Toggle */}
-        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+        <div className="flex flex-wrap items-center gap-2 self-start shrink-0">
           {onAskMentorAboutStep && (
             <button
               onClick={() => onAskMentorAboutStep(currentStep)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
-              title={`Ask mentor about Step ${currentStep.stepNumber}`}
+              title={`Ask mentor about Step ${currentStepIndex + 1}`}
             >
               <GraduationCap className="w-3.5 h-3.5 text-[#087F83]" />
               <span className="hidden sm:inline">Ask Mentor About Step</span>
@@ -187,7 +251,7 @@ export function StepPlayerControls({
       </div>
 
       {/* Safety & Passport Tips */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-2">
         {currentStep.safetyWarning && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 text-xs text-amber-900">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -220,84 +284,7 @@ export function StepPlayerControls({
         </span>
       </div>
 
-      {/* Bottom Controls Bar: Playback + Camera Presets */}
-      <div className="pt-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Playback Buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onPrevStep}
-            disabled={currentStepIndex === 0}
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            title="Previous Step"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
 
-          <button
-            onClick={onTogglePlay}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#087F83] hover:bg-[#066366] rounded-lg shadow-xs transition-colors cursor-pointer"
-            title={isPlaying ? 'Pause Auto-Play' : 'Play Step-by-Step'}
-          >
-            {isPlaying ? (
-              <>
-                <Pause className="w-3.5 h-3.5" />
-                <span>Pause</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5" />
-                <span>Auto-Play</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={onToggleSpeed}
-            className="px-2.5 py-2 text-xs font-mono font-semibold text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer"
-            title="Change Playback Speed"
-          >
-            {playbackSpeed}x
-          </button>
-
-          <button
-            onClick={onReplayStep}
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer"
-            title="Replay Step View"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={onNextStep}
-            disabled={currentStepIndex === steps.length - 1}
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            title="Next Step"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Camera Angles Presets */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Camera className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Camera:</span>
-          </span>
-          {cameraPresets.map(({ preset, label }) => (
-            <button
-              key={preset}
-              onClick={() => onSelectCameraPreset(preset)}
-              className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer ${
-                activeCameraPreset === preset
-                  ? 'bg-[#132B3B] text-white shadow-2xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

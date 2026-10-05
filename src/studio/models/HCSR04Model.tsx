@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { HardwareLabel } from './HardwareLabel';
 import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
@@ -92,12 +93,7 @@ export function HCSR04Model({
         />
       </mesh>
 
-      {/* Silkscreen text banner */}
-      <mesh position={[0, 0.22, 0.045]}>
-        <planeGeometry args={[1.3, 0.12]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.8} />
-      </mesh>
-
+      <HardwareLabel text="HC-SR04" position={[0, 0.25, 0.05]} rotation={[0, 0, 0]} width={0.75} />
       {/* Left Ultrasonic Transducer Cylinder (Transmitter 'T') */}
       <group position={[-0.45, 0, 0.35]} rotation={[Math.PI / 2, 0, 0]}>
         {/* Metal canister cylinder */}
@@ -119,6 +115,14 @@ export function HCSR04Model({
           <cylinderGeometry args={[0.08, 0.16, 0.03, 16]} />
           <meshStandardMaterial color="#94a3b8" metalness={0.9} />
         </mesh>
+        <mesh position={[0, 0.35, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.245, 0.014, 6, 24]} />
+          <meshStandardMaterial color="#c5d2d8" metalness={0.85} roughness={0.28} />
+        </mesh>
+        {[-0.12, -0.04, 0.04, 0.12].map(z => <mesh key={z} position={[0, 0.353, z]}>
+          <boxGeometry args={[0.35, 0.008, 0.01]} />
+          <meshStandardMaterial color="#70818a" metalness={0.7} roughness={0.5} />
+        </mesh>)}
       </group>
 
       {/* Right Ultrasonic Transducer Cylinder (Receiver 'R') */}
@@ -139,6 +143,14 @@ export function HCSR04Model({
           <cylinderGeometry args={[0.08, 0.16, 0.03, 16]} />
           <meshStandardMaterial color="#94a3b8" metalness={0.9} />
         </mesh>
+        <mesh position={[0, 0.35, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.245, 0.014, 6, 24]} />
+          <meshStandardMaterial color="#c5d2d8" metalness={0.85} roughness={0.28} />
+        </mesh>
+        {[-0.12, -0.04, 0.04, 0.12].map(z => <mesh key={z} position={[0, 0.353, z]}>
+          <boxGeometry args={[0.35, 0.008, 0.01]} />
+          <meshStandardMaterial color="#70818a" metalness={0.7} roughness={0.5} />
+        </mesh>)}
       </group>
 
       {/* Central 10MHz oscillator crystal */}
@@ -151,7 +163,7 @@ export function HCSR04Model({
       {isSimulating && (
         <group ref={waveRef} position={[0, 0, 0.7]}>
           {/* Concentric spherical sonar sound wavefronts */}
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <mesh>
             <ringGeometry args={[0.5, 0.58, 24]} />
             <meshBasicMaterial
               color={isTriggered ? '#10b981' : '#0ea5e9'}
@@ -160,7 +172,7 @@ export function HCSR04Model({
               side={THREE.DoubleSide}
             />
           </mesh>
-          <mesh position={[0, 0, 0.4]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh position={[0, 0, 0.4]}>
             <ringGeometry args={[0.8, 0.88, 24]} />
             <meshBasicMaterial
               color={isTriggered ? '#10b981' : '#0ea5e9'}

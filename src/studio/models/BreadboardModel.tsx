@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import * as THREE from 'three';
+import { BreadboardSockets } from './BenchDetails';
+import { RoundedBox } from '@react-three/drei';
 import { PinEndpoint } from '../types';
 
 interface BreadboardModelProps {
@@ -19,7 +21,7 @@ interface BreadboardModelProps {
   onSelectPin?: (pin: PinEndpoint) => void;
 }
 
-export function BreadboardModel({
+export const BreadboardModel = React.memo(function BreadboardModel({
   position = [0.2, 0, 0],
   rotation = [0, 0, 0],
   isSelected = false,
@@ -65,15 +67,15 @@ export function BreadboardModel({
       )}
 
       {/* Main Off-White Breadboard Body */}
-      <mesh position={[0, bbHeight / 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[bbWidth, bbHeight, bbLength]} />
+      <RoundedBox position={[0, bbHeight / 2, 0]} args={[bbWidth, bbHeight, bbLength]} radius={0.045} smoothness={2} castShadow receiveShadow>
         <meshStandardMaterial
           color="#f8fafc"
           roughness={0.5}
           metalness={0.05}
         />
-      </mesh>
+      </RoundedBox>
 
+      <BreadboardSockets />
       {/* Center Dividing Valley Channel */}
       <mesh position={[0, bbHeight - 0.02, 0]}>
         <boxGeometry args={[0.15, 0.06, bbLength * 0.94]} />
@@ -81,37 +83,37 @@ export function BreadboardModel({
       </mesh>
 
       {/* Left Power Rail Red (+) Line */}
-      <mesh position={[-bbWidth / 2 + 0.16, bbHeight + 0.005, 0]}>
+      <mesh position={[-bbWidth / 2 + 0.16, bbHeight + 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.04, bbLength * 0.92]} />
         <meshBasicMaterial color="#ef4444" side={THREE.DoubleSide} />
       </mesh>
 
       {/* Left Ground Rail Blue (-) Line */}
-      <mesh position={[-bbWidth / 2 + 0.28, bbHeight + 0.005, 0]}>
+      <mesh position={[-bbWidth / 2 + 0.28, bbHeight + 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.04, bbLength * 0.92]} />
         <meshBasicMaterial color="#0284c7" side={THREE.DoubleSide} />
       </mesh>
 
       {/* Right Ground Rail Blue (-) Line */}
-      <mesh position={[bbWidth / 2 - 0.28, bbHeight + 0.005, 0]}>
+      <mesh position={[bbWidth / 2 - 0.28, bbHeight + 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.04, bbLength * 0.92]} />
         <meshBasicMaterial color="#0284c7" side={THREE.DoubleSide} />
       </mesh>
 
       {/* Right Power Rail Red (+) Line */}
-      <mesh position={[bbWidth / 2 - 0.16, bbHeight + 0.005, 0]}>
+      <mesh position={[bbWidth / 2 - 0.16, bbHeight + 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.04, bbLength * 0.92]} />
         <meshBasicMaterial color="#ef4444" side={THREE.DoubleSide} />
       </mesh>
 
       {/* Breadboard Row Pin Grid Texture Plates */}
-      <mesh position={[-0.26, bbHeight + 0.004, 0]}>
+      <mesh position={[-0.26, bbHeight + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.32, bbLength * 0.88]} />
-        <meshBasicMaterial color="#e2e8f0" transparent opacity={0.6} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#e2e8f0" transparent opacity={0.15} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0.26, bbHeight + 0.004, 0]}>
+      <mesh position={[0.26, bbHeight + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.32, bbLength * 0.88]} />
-        <meshBasicMaterial color="#e2e8f0" transparent opacity={0.6} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#e2e8f0" transparent opacity={0.15} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Pin Endpoint Interactive Markers */}
@@ -172,4 +174,4 @@ export function BreadboardModel({
       })}
     </group>
   );
-}
+});

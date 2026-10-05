@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { HardwareLabel } from './HardwareLabel';
 import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
+import { PCBDetails } from './BenchDetails';
 import { PinEndpoint } from '../types';
 
 interface ArduinoUnoModelProps {
@@ -19,7 +21,7 @@ interface ArduinoUnoModelProps {
   onSelectPin?: (pin: PinEndpoint) => void;
 }
 
-export function ArduinoUnoModel({
+export const ArduinoUnoModel = React.memo(function ArduinoUnoModel({
   position = [2.5, 0, 0],
   rotation = [0, 0, 0],
   isSelected = false,
@@ -70,23 +72,25 @@ export function ArduinoUnoModel({
       <mesh position={[0, pcbHeight / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[pcbWidth, pcbHeight, pcbLength]} />
         <meshStandardMaterial
-          color={isSelected ? '#0e7490' : '#0284c7'}
-          roughness={0.35}
+          color={isSelected ? '#0e7490' : '#12616d'}
+          roughness={0.68}
           metalness={0.15}
         />
       </mesh>
 
       {/* Silkscreen decorative stripes & text plate */}
-      <mesh position={[0, pcbHeight + 0.005, 0]}>
+      <mesh position={[0, pcbHeight + 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[pcbWidth * 0.9, pcbLength * 0.85]} />
         <meshBasicMaterial
           color="#0369a1"
           transparent
-          opacity={0.6}
+          opacity={0.12}
           side={THREE.DoubleSide}
         />
       </mesh>
 
+      <HardwareLabel text="UNO R3" position={[-0.5, 0.112, 1.2]} width={0.6} />
+      <PCBDetails />
       {/* USB Type-B Female Connector (Silver metal box at rear left) */}
       <mesh position={[-0.7, 0.4, -1.5]} castShadow>
         <boxGeometry args={[0.55, 0.45, 0.7]} />
@@ -238,4 +242,4 @@ export function ArduinoUnoModel({
       })}
     </group>
   );
-}
+});

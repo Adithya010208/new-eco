@@ -4,6 +4,7 @@
  */
 
 import React, { useRef } from 'react';
+import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface VirtualHandModelProps {
@@ -32,37 +33,17 @@ export function VirtualHandModel({
       position={[-4.2, 3.2, zPos]}
       rotation={[0, 0, 0]}
     >
-      {/* Hand / Obstacle Paddle Plate */}
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[1.6, 2.0, 0.12]} />
-        <meshStandardMaterial
-          color={isTriggered ? '#10b981' : '#f59e0b'}
-          roughness={0.4}
-          metalness={0.1}
-          transparent
-          opacity={0.85}
-        />
-      </mesh>
-
-      {/* Palm & Fingers outline */}
-      <group position={[0, -0.2, 0.08]}>
-        {/* Palm */}
-        <mesh>
-          <boxGeometry args={[1.0, 0.9, 0.04]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.3} />
-        </mesh>
-        {/* Thumb */}
-        <mesh position={[-0.6, -0.1, 0]} rotation={[0, 0, -Math.PI / 4]}>
-          <boxGeometry args={[0.22, 0.45, 0.04]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.3} />
-        </mesh>
-        {/* 4 Fingers */}
-        {[-0.3, -0.1, 0.1, 0.3].map((x, i) => (
-          <mesh key={i} position={[x, 0.65, 0]}>
-            <boxGeometry args={[0.16, 0.55, 0.04]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-        ))}
+      <group position={[0, -0.2, 0]}>
+        <RoundedBox args={[0.9, 0.9, 0.25]} radius={0.14} smoothness={2} castShadow>
+          <meshStandardMaterial color={isTriggered ? '#c0dccf' : '#e2b796'} roughness={0.78} />
+        </RoundedBox>
+        <RoundedBox position={[-0.55, -0.02, 0]} rotation={[0, 0, -0.5]} args={[0.22, 0.65, 0.24]} radius={0.1} smoothness={2} castShadow>
+          <meshStandardMaterial color="#e2b796" roughness={0.78} />
+        </RoundedBox>
+        {[-0.32, -0.1, 0.12, 0.34].map((x, i) => <RoundedBox key={x} position={[x, 0.63, 0]} args={[0.19, [0.62, 0.8, 0.74, 0.52][i], 0.22]} radius={0.085} smoothness={2} castShadow>
+          <meshStandardMaterial color="#e2b796" roughness={0.78} />
+        </RoundedBox>)}
+        <RoundedBox position={[0, -0.65, 0]} args={[0.6, 0.65, 0.22]} radius={0.08} smoothness={2} castShadow><meshStandardMaterial color="#426d74" roughness={0.9} /></RoundedBox>
       </group>
 
       {/* Acoustic reflection wave rings on hand surface when triggered */}

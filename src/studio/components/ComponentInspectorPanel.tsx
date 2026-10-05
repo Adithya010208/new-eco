@@ -48,6 +48,7 @@ export function ComponentInspectorPanel({
           </h3>
         </div>
         <button
+          aria-label="Close component inspector"
           onClick={onClose}
           className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
         >

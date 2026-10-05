@@ -183,7 +183,7 @@ export function LeaderboardsPage({ activeUser, mode = 'demo', googleUser }: Lead
               <Trophy className="w-3.5 h-3.5" />
               <span>Verified Circular Engineering</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            <h1 className="text-white text-2xl sm:text-3xl font-bold tracking-tight">
               {t('leaderboards.title', 'Circular Maker Leaderboards')}
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 max-w-2xl leading-relaxed">
@@ -294,10 +294,11 @@ export function LeaderboardsPage({ activeUser, mode = 'demo', googleUser }: Lead
                     return (
                       <tr
                         key={entry.userId}
+                        aria-current={isUser ? 'true' : undefined}
                         className={`transition-colors ${
                           isUser
                             ? 'bg-[#EAF4F3]/70 font-semibold text-[#132B3B] hover:bg-[#EAF4F3]'
-                            : 'hover:bg-slate-50 text-slate-700'
+                            : entry.rank <= 3 ? 'bg-slate-50/70 hover:bg-slate-100 text-slate-800' : 'hover:bg-slate-50 text-slate-700'
                         }`}
                       >
                         {/* Rank */}
@@ -434,10 +435,11 @@ export function LeaderboardsPage({ activeUser, mode = 'demo', googleUser }: Lead
                     return (
                       <tr
                         key={entry.userId}
+                        aria-current={isUser ? 'true' : undefined}
                         className={`transition-colors ${
                           isUser
                             ? 'bg-[#EAF4F3]/70 font-semibold text-[#132B3B] hover:bg-[#EAF4F3]'
-                            : 'hover:bg-slate-50 text-slate-700'
+                            : entry.rank <= 3 ? 'bg-slate-50/70 hover:bg-slate-100 text-slate-800' : 'hover:bg-slate-50 text-slate-700'
                         }`}
                       >
                         {/* Rank */}

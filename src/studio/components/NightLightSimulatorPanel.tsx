@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -26,6 +27,7 @@ export function NightLightSimulatorPanel({
   onAmbientLightChange,
   onResetSimulation,
 }: NightLightSimulatorPanelProps) {
+  const { t } = useTranslation();
   // LDR resistance curves inversely: 0% light -> ~1000k (1M), 100% light -> ~10k
   const rLdrKOhms = Math.round(10 + (1000 - 10) * Math.pow((100 - ambientLightPercent) / 100, 2));
   // Voltage divider: 5V * (10k / (R_ldr + 10k))
@@ -49,7 +51,7 @@ export function NightLightSimulatorPanel({
               Expected Behavior Preview: Night Light
             </h3>
             <span className="text-[11px] text-slate-500">
-              Simulate ambient room lux and observe automatic LED switching
+              Simulate relative ambient light and observe automatic LED switching
             </span>
           </div>
         </div>
@@ -63,6 +65,10 @@ export function NightLightSimulatorPanel({
         </button>
       </div>
 
+      <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs">
+        <span>{t('studioPolish.output')}</span><strong className="text-[#087F83] tabular-nums">{isDarkTriggered ? 100 : 0}%</strong>
+      </div>
+<p className="text-[11px] text-slate-500 leading-relaxed">Illustrative divider values; this preview switches at 40% relative light. It does not run firmware or model ADC hysteresis.</p>
       {/* Primary Status Banner */}
       <div
         className={`p-3.5 rounded-xl border flex items-center justify-between transition-colors ${
@@ -108,11 +114,12 @@ export function NightLightSimulatorPanel({
             <span>Ambient Room Illumination:</span>
           </label>
           <span className="font-mono font-bold text-[#132B3B]">
-            {ambientLightPercent}% Lux
+            {ambientLightPercent}% relative light
           </span>
         </div>
 
         <input
+          aria-label="Relative ambient light level"
           type="range"
           min="0"
           max="100"

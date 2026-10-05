@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "./";
+@source "../index.html";
 
 @layer base {
   :root {
@@ -29,4 +31,33 @@
 *:focus-visible {
   outline: 2px solid #087F83;
   outline-offset: 2px;
+}
+
+@layer base {
+  button, a, input, select, textarea { touch-action: manipulation; }
+  h1 { letter-spacing: -0.035em; }
+  h2, h3 { letter-spacing: -0.02em; }
+  input[type="range"] { min-height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Keep the model and its guide in the same working viewport. */
+.studio-scene { height: clamp(320px, 48dvh, 480px); }
+.studio-panel-content { max-height: 460px; scrollbar-gutter: stable; }
+@media (min-width: 1024px) {
+  .studio-scene, .studio-sidebar { height: clamp(410px, calc(100dvh - 240px), 760px); }
+  .studio-workspace { position: sticky; top: 88px; }
+  .studio-panel-content { flex: 1; max-height: none; }
+  .studio-scene-expanded { position: fixed; inset: 84px 410px 16px 16px; height: auto; z-index: 25; }
+}
+@media (max-width: 1023px) {
+  .studio-scene { position: sticky; top: 76px; z-index: 20; }
+  .studio-panel-content { max-height: 42dvh; }
+  .studio-scene-expanded { height: 58dvh; }
+}
+@media (max-width: 639px) {
+  .studio-scene { height: 34dvh; min-height: 240px; position: relative; top: auto; }
+  .studio-panel-content { max-height: 42dvh; }
 }

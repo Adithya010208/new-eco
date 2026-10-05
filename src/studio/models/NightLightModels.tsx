@@ -84,10 +84,10 @@ export function LDRModel({
       </mesh>
 
       {/* Center Serpentine Track Simulation */}
-      <mesh position={[0, 0.355, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.06, 0.14, 16]} />
-        <meshBasicMaterial color="#78350F" />
-      </mesh>
+      {[-0.12, -0.06, 0, 0.06, 0.12].map((z, i) => <group key={z}>
+        <mesh position={[0, 0.355, z]}><boxGeometry args={[0.25, 0.007, 0.012]} /><meshStandardMaterial color="#713e25" roughness={0.8} /></mesh>
+        {i < 4 && <mesh position={[i % 2 ? -0.12 : 0.12, 0.355, z + 0.03]}><boxGeometry args={[0.012, 0.007, 0.06]} /><meshStandardMaterial color="#713e25" roughness={0.8} /></mesh>}
+      </group>)}
 
       {/* Dual Metal Leads */}
       <mesh position={[-0.08, 0.15, 0]}>
@@ -209,10 +209,15 @@ export function LEDModel({
 }: LEDModelProps) {
   const [hovered, setHovered] = useState(false);
   const glowLightRef = useRef<THREE.PointLight>(null);
+  const domeMaterial = useRef<THREE.MeshStandardMaterial>(null);
+  const tipMaterial = useRef<THREE.MeshStandardMaterial>(null);
 
   useFrame((_, delta) => {
+    [domeMaterial.current, tipMaterial.current].forEach(material => {
+      if (material) material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, isIlluminated ? 2 : 0, 8, delta);
+    });
     if (glowLightRef.current) {
-      glowLightRef.current.intensity = isIlluminated ? 2.5 : 0;
+      glowLightRef.current.intensity = THREE.MathUtils.damp(glowLightRef.current.intensity, isIlluminated ? 2.5 : 0, 8, delta);
     }
   });
 
@@ -259,8 +264,9 @@ export function LEDModel({
         <meshStandardMaterial
           color={isIlluminated ? '#FCA5A5' : '#B91C1C'}
           roughness={0.1}
-          emissive={isIlluminated ? '#EF4444' : '#000000'}
-          emissiveIntensity={isIlluminated ? 1.8 : 0}
+          emissive="#EF4444"
+          ref={domeMaterial}
+          emissiveIntensity={0}
           transparent
           opacity={0.85}
         />
@@ -272,8 +278,9 @@ export function LEDModel({
         <meshStandardMaterial
           color={isIlluminated ? '#FEF2F2' : '#B91C1C'}
           roughness={0.1}
-          emissive={isIlluminated ? '#EF4444' : '#000000'}
-          emissiveIntensity={isIlluminated ? 2.2 : 0}
+          emissive="#EF4444"
+          ref={tipMaterial}
+          emissiveIntensity={0}
           transparent
           opacity={0.85}
         />

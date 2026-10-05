@@ -54,12 +54,12 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-3 flex flex-wrap items-center justify-between gap-4">
         {/* Zone 1: Brand Wordmark */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             aria-label="Toggle mobile menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -74,7 +74,7 @@ export function Header({
         </div>
 
         {/* Zone 2: Clean nav links */}
-        <nav className="hidden lg:flex items-center gap-5 text-sm font-medium text-slate-600">
+        <nav className="hidden 2xl:flex flex-wrap items-center gap-3 text-sm font-medium text-slate-600">
           {navLinks.map((link) => {
             const isActive =
               link.href === '/'
@@ -105,7 +105,7 @@ export function Header({
         </nav>
 
         {/* Zone 3: Primary Actions + Mode & Auth Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
           {/* Labelled Demo User Switcher (Only visible in Demo Mode) */}
           {mode === 'demo' && (
             <DemoUserSwitcher
@@ -147,7 +147,7 @@ export function Header({
 
       {/* Mobile drawer navigation */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-1 shadow-lg">
+        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-1 shadow-lg">
           {navLinks.map((link) => {
             const isActive =
               link.href === '/'

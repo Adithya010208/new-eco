@@ -583,7 +583,7 @@ function EcoBuildApp() {
       />
 
       {/* Main Workspace Frame */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
         {/* Desktop Sidebar */}
         <Sidebar
           inventoryCount={inventory.length}
@@ -596,7 +596,7 @@ function EcoBuildApp() {
         />
 
         {/* Dynamic Route Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto">
+        <main className="app-content flex-1 p-3 sm:p-5 lg:p-5 min-w-0">
           <Switch>
             <Route path="/">
               <DiscoverPage

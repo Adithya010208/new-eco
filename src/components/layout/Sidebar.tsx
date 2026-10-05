@@ -111,7 +111,7 @@ export function Sidebar({
   const futureNav: { type: FutureFeatureType; label: string; icon: any }[] = [];
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col justify-between p-4 shrink-0 min-h-[calc(100vh-4rem)]">
+    <aside className="w-56 xl:w-60 bg-white border-r border-slate-200 hidden lg:flex flex-col justify-between p-4 shrink-0 sticky top-20 self-start h-[calc(100dvh-5rem)] overflow-y-auto">
       <div className="space-y-6">
         {/* Active Identity Banner */}
         <div className={`p-3 border rounded-xl space-y-1 ${
